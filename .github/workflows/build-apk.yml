@@ -46,6 +46,36 @@ jobs:
             .png().toFile('assets/splash.png');
           NODE
           npx capacitor-assets generate --android
+
+      - name: Force official logo into Android launcher resources
+        run: |
+          node --input-type=module <<'NODE'
+          import sharp from 'sharp';
+          import fs from 'node:fs/promises';
+          const logo = Buffer.from(await fs.readFile('public/aquaprofish-logo.svg'));
+          const root = 'android/app/src/main/res';
+          const densities = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
+          for (const [density, size] of Object.entries(densities)) {
+            const dir = `${root}/mipmap-${density}`;
+            await fs.mkdir(dir, { recursive: true });
+            const icon = await sharp({ create: { width: size, height: size, channels: 4, background: '#071a2b' } })
+              .composite([{ input: await sharp(logo).resize(Math.round(size * 0.82), Math.round(size * 0.72), { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
+              .png().toBuffer();
+            await fs.writeFile(`${dir}/ic_launcher.png`, icon);
+            await fs.writeFile(`${dir}/ic_launcher_round.png`, icon);
+          }
+          const foreground = await sharp({ create: { width: 432, height: 432, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+            .composite([{ input: await sharp(logo).resize(280, 236, { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
+            .png().toBuffer();
+          await fs.mkdir(`${root}/mipmap-xxxhdpi`, { recursive: true });
+          await fs.writeFile(`${root}/mipmap-xxxhdpi/ic_launcher_foreground.png`, foreground);
+          await fs.mkdir(`${root}/drawable`, { recursive: true });
+          await fs.writeFile(`${root}/drawable/ic_launcher_background.xml`, '<resources><color name="ic_launcher_background">#071a2b</color></resources>');
+          await fs.mkdir(`${root}/mipmap-anydpi-v26`, { recursive: true });
+          const adaptive = '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@drawable/ic_launcher_background"/><foreground android:drawable="@mipmap/ic_launcher_foreground"/></adaptive-icon>';
+          await fs.writeFile(`${root}/mipmap-anydpi-v26/ic_launcher.xml`, adaptive);
+          await fs.writeFile(`${root}/mipmap-anydpi-v26/ic_launcher_round.xml`, adaptive);
+          NODE
       - name: Set Android app version
         run: |
           sed -i -E "s/versionCode [0-9]+/versionCode ${GITHUB_RUN_NUMBER}/" android/app/build.gradle
