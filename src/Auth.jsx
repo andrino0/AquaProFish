@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Fish, Waves } from 'lucide-react';
 import { supabase } from './lib/supabase.js';
 
 const APP_URL = 'https://andrino0.github.io/AquaProFish/';
@@ -63,6 +64,10 @@ export default function Auth() {
 
   return <main className="auth-screen">
     <section className="auth-card">
+      <div className="auth-brand">
+        <div className="brand-mark"><Waves size={25} /><Fish size={20} /></div>
+        <div><strong>AquaPro<span>Fish</span></strong><small>GESTÃO • CRIAÇÃO • COMUNIDADE</small></div>
+      </div>
       <div className="auth-heading"><span className="eyebrow">SEU MUNDO AQUÁTICO</span><h1>{mode === 'signup' ? 'Crie sua conta' : 'Bem-vindo de volta'}</h1><p>{mode === 'signup' ? 'Cadastre-se gratuitamente para começar.' : 'Entre para acessar seus aquários e sua comunidade.'}</p></div>
       <form onSubmit={submit} className="auth-form">
         {mode === 'signup' && <label className="field"><span>Como devemos te chamar?</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="Seu nome" required maxLength={80}/></label>}
