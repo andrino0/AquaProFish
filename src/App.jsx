@@ -37,6 +37,8 @@ function Dashboard({ user, onSignOut }) {
   const [expandedComments, setExpandedComments] = useState({});
   const [likeBusy, setLikeBusy] = useState({});
   const [pixCopied, setPixCopied] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState('');
 
   useEffect(() => {
     if (!user?.id) return;
@@ -142,7 +144,8 @@ function Dashboard({ user, onSignOut }) {
     { label: 'Rotina', icon: CalendarDays },
     { label: 'Comunidade', icon: MessageCircle },
     { label: 'Guia de espécies', icon: BookOpen },
-    { label: 'Apoie o AquaProFish', icon: Heart }
+    { label: 'Apoie o AquaProFish', icon: Heart },
+    { label: 'Configurações', icon: Settings }
   ];
 
   const openModal = (type) => { setForm({}); setModal(type); };
@@ -307,6 +310,148 @@ function Dashboard({ user, onSignOut }) {
     save(tasks.map(t => t.id === id ? { ...t, done: completed } : t), setTasks);
   }
 
+  function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  async function exportBackup() {
+    setBackupBusy(true);
+    setSettingsMessage('');
+    try {
+      const [aquariums, fish, taskRows, postRows, likes, comments] = await Promise.all([
+        supabase.from('aquariums').select('*').eq('user_id', user.id),
+        supabase.from('fish').select('*').eq('user_id', user.id),
+        supabase.from('tasks').select('*').eq('user_id', user.id),
+        supabase.from('posts').select('*').eq('user_id', user.id),
+        supabase.from('post_likes').select('*').eq('user_id', user.id),
+        supabase.from('post_comments').select('*').eq('user_id', user.id)
+      ]);
+      const failed = [aquariums, fish, taskRows, postRows, likes, comments].find(result => result.error);
+      if (failed) throw failed.error;
+      const backup = {
+        app: 'AquaProFish',
+        version: 1,
+        exported_at: new Date().toISOString(),
+        user_id: user.id,
+        account: { email: user.email || '', display_name: displayName },
+        data: {
+          aquariums: aquariums.data || [],
+          fish: fish.data || [],
+          tasks: taskRows.data || [],
+          posts: postRows.data || [],
+          post_likes: likes.data || [],
+          post_comments: comments.data || []
+        }
+      };
+      const date = new Date().toISOString().slice(0, 10);
+      downloadFile(JSON.stringify(backup, null, 2), 'aquaprofish-backup-' + date + '.json', 'application/json;charset=utf-8');
+      setSettingsMessage('Backup criado. Guarde o arquivo em um local seguro.');
+    } catch (error) {
+      console.error('Erro ao exportar backup:', error);
+      setSettingsMessage('Não foi possível criar o backup. Verifique a conexão e tente novamente.');
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function exportCsv() {
+    setBackupBusy(true);
+    setSettingsMessage('');
+    try {
+      const [aquariums, fish, taskRows, postRows] = await Promise.all([
+        supabase.from('aquariums').select('*').eq('user_id', user.id),
+        supabase.from('fish').select('*').eq('user_id', user.id),
+        supabase.from('tasks').select('*').eq('user_id', user.id),
+        supabase.from('posts').select('*').eq('user_id', user.id)
+      ]);
+      const failed = [aquariums, fish, taskRows, postRows].find(result => result.error);
+      if (failed) throw failed.error;
+      const tanksById = new Map((aquariums.data || []).map(tank => [tank.id, tank]));
+      const rows = [
+        ['Tipo', 'Nome', 'Detalhes', 'Aquário', 'Quantidade', 'Status'],
+        ...(aquariums.data || []).map(t => ['Aquário', t.name, [t.volume_label || t.volume_liters || '', t.temperature || '', t.ph || ''].filter(Boolean).join(' | '), '', '', t.status || '']),
+        ...(fish.data || []).map(f => ['Peixe', f.name, f.species || '', tanksById.get(f.aquarium_id)?.name || 'Sem aquário', f.quantity ?? '', '']),
+        ...(taskRows.data || []).map(t => ['Tarefa', t.title, t.detail || '', '', '', t.completed ? 'Concluída' : 'Pendente']),
+        ...(postRows.data || []).map(p => ['Publicação', '', p.content || '', '', '', ''])
+      ];
+      const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
+      const date = new Date().toISOString().slice(0, 10);
+      downloadFile(csv, 'aquaprofish-dados-' + date + '.csv', 'text/csv;charset=utf-8');
+      setSettingsMessage('Planilha CSV criada com seus aquários, peixes, tarefas e publicações.');
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      setSettingsMessage('Não foi possível criar a planilha. Verifique a conexão e tente novamente.');
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function importBackup(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!window.confirm('Importar este backup? Os registros serão adicionados à sua conta. Os dados atuais não serão apagados e registros com o mesmo identificador serão mantidos.')) return;
+    setBackupBusy(true);
+    setSettingsMessage('');
+    try {
+      const backup = JSON.parse(await file.text());
+      if (backup?.app !== 'AquaProFish' || backup?.version !== 1 || backup?.user_id !== user.id || !backup?.data) {
+        throw new Error('Este arquivo não é um backup válido desta conta AquaProFish.');
+      }
+      const data = backup.data;
+      const pickRows = (rows, fields) => (Array.isArray(rows) ? rows : []).filter(row => row && typeof row === 'object').map(row => {
+        const clean = {};
+        fields.forEach(field => { if (row[field] !== undefined) clean[field] = row[field]; });
+        clean.user_id = user.id;
+        return clean;
+      });
+      const aquariums = pickRows(data.aquariums, ['id','name','volume_liters','description','created_at','volume_label','temperature','ph','status']);
+      const fish = pickRows(data.fish, ['id','aquarium_id','name','species','quantity','notes','created_at']);
+      const taskRows = pickRows(data.tasks, ['id','title','due_date','completed','created_at','detail']);
+      const postRows = pickRows(data.posts, ['id','content','image_url','created_at','likes']);
+      const validIds = rows => rows.filter(row => row.id && row.id !== 'undefined');
+      const restore = async (table, rows, conflict = 'id') => {
+        if (!rows.length) return;
+        const { error } = await supabase.from(table).upsert(rows, { onConflict: conflict, ignoreDuplicates: true });
+        if (error) throw error;
+      };
+      await restore('aquariums', validIds(aquariums));
+      await restore('fish', validIds(fish));
+      await restore('tasks', validIds(taskRows));
+      await restore('posts', validIds(postRows));
+      const postIds = [...new Set([
+        ...postRows.map(row => row.id),
+        ...(Array.isArray(data.post_likes) ? data.post_likes.map(row => row?.post_id) : []),
+        ...(Array.isArray(data.post_comments) ? data.post_comments.map(row => row?.post_id) : [])
+      ].filter(Boolean))];
+      let availablePostIds = new Set(postRows.map(row => row.id).filter(Boolean));
+      if (postIds.length) {
+        const { data: existingPosts, error } = await supabase.from('posts').select('id').in('id', postIds);
+        if (error) throw error;
+        (existingPosts || []).forEach(post => availablePostIds.add(post.id));
+      }
+      const likes = (Array.isArray(data.post_likes) ? data.post_likes : []).filter(row => row?.post_id && availablePostIds.has(row.post_id)).map(row => ({ post_id: row.post_id, user_id: user.id, ...(row.created_at ? { created_at: row.created_at } : {}) }));
+      const comments = pickRows(data.post_comments, ['id','post_id','content','created_at']).filter(row => row.id && availablePostIds.has(row.post_id));
+      await restore('post_likes', likes, 'post_id,user_id');
+      await restore('post_comments', comments);
+      setSettingsMessage('Backup importado. Os novos registros foram adicionados; atualizando seus dados...');
+      window.setTimeout(() => window.location.reload(), 1200);
+    } catch (error) {
+      console.error('Erro ao importar backup:', error);
+      setSettingsMessage(error.message?.includes('backup válido') ? error.message : 'Não foi possível concluir a restauração. Confira se o arquivo pertence a esta conta e tente novamente.');
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
   const title = section === 'Início' ? 'Seu mundo aquático em um só lugar' : section;
   const subtitle = section === 'Início' ? 'Acompanhe seus aquários, peixes e cuidados diários.' : 'Organize e acompanhe seu aquarismo.';
 
@@ -331,7 +476,6 @@ function Dashboard({ user, onSignOut }) {
           {!Capacitor.isNativePlatform() && <a className="app-download-nav" href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk" aria-label="Baixe aqui o app AquaProFish">
             <Download size={18}/><span>Baixe aqui o app</span>
           </a>}
-          <button className="nav-item"><Settings size={19}/><span>Configurações</span></button>
           <div className="profile"><div className="avatar">{avatarInitial}</div><div><strong>{displayName}</strong><small>Minha conta</small></div></div>
         </div>
       </aside>
@@ -340,7 +484,7 @@ function Dashboard({ user, onSignOut }) {
         <header className="topbar">
           <button className="menu-toggle" onClick={() => setMobileMenu(true)} aria-label="Abrir menu"><Menu/></button>
           <div className="breadcrumb">AquaProFish <ChevronRight size={14}/> <strong>{section}</strong></div>
-          <div className="top-actions"><span className="user-email">{user?.email}</span><button className="auth-logout" onClick={onSignOut}>Sair</button><span className="status-pill"><i/> Conta conectada</span><button className="icon-button" aria-label="Notificações"><Bell size={19}/></button><div className="avatar small">A</div></div>
+          <div className="top-actions"><span className="user-email">{user?.email}</span><button className="auth-logout" onClick={onSignOut}>Sair</button><span className="status-pill"><i/> Conta conectada</span><button className="icon-button" aria-label="Notificações"><Bell size={19}/></button><div className="avatar small">{avatarInitial}</div></div>
         </header>
 
         <div className="content">
@@ -396,6 +540,29 @@ function Dashboard({ user, onSignOut }) {
                     <button type="submit" className="comment-send" disabled={!String(commentDrafts[post.id] || '').trim()}>Enviar</button>
                   </form>
                 </div>}</article>)}</div><p className="note">As publicações, curtidas e comentários ficam salvos no banco de dados da comunidade.</p></section>}
+
+          {section === 'Configurações' && <section className="settings-layout">
+            <article className="panel settings-card">
+              <div className="panel-heading"><div><h3>Minha conta</h3><p>Informações da sua conta conectada</p></div><span className="tag success">Conectada</span></div>
+              <div className="settings-account"><div className="avatar">{avatarInitial}</div><div><strong>{displayName}</strong><span>{user?.email || 'E-mail não disponível'}</span><small>Conta criada em {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '—'}</small></div></div>
+              <p className="note">Seus registros ficam associados à sua conta e sincronizados com o AquaProFish.</p>
+            </article>
+            <article className="panel settings-card">
+              <div className="panel-heading"><div><h3>Backup e exportação</h3><p>Tenha uma cópia dos seus registros guardada com você.</p></div><Download size={20}/></div>
+              <div className="settings-actions">
+                <button type="button" className="primary-button" onClick={exportBackup} disabled={backupBusy}><Download size={17}/>{backupBusy ? 'Aguarde...' : 'Exportar backup completo'}</button>
+                <button type="button" className="secondary-button" onClick={exportCsv} disabled={backupBusy}><Download size={17}/> Exportar planilha CSV</button>
+                <label className={`secondary-button settings-import ${backupBusy ? 'disabled' : ''}`}><input type="file" accept=".json,application/json" onChange={importBackup} disabled={backupBusy}/><Download size={17}/> Importar backup JSON</label>
+              </div>
+              <p className="note">O backup inclui aquários, peixes, tarefas, publicações e suas interações. A restauração adiciona registros que faltam, sem apagar os dados atuais. O arquivo só pode ser restaurado na mesma conta.</p>
+              {settingsMessage && <p className="settings-message" role="status">{settingsMessage}</p>}
+            </article>
+            <article className="panel settings-card">
+              <div className="panel-heading"><div><h3>Sobre o AquaProFish</h3><p>Gestão • Criação • Comunidade</p></div><Heart size={20}/></div>
+              <div className="settings-about"><span>Desenvolvedor</span><strong>Andrino Morales Botelho</strong><span>Versão do aplicativo</span><strong>1.0 • 2026</strong></div>
+              <button type="button" className="auth-logout settings-signout" onClick={onSignOut}>Sair da minha conta</button>
+            </article>
+          </section>}
 
           {section === 'Apoie o AquaProFish' && <section className="support-layout">
             <article className="support-card">
