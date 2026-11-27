@@ -4,5 +4,16 @@
   "webDir": "dist",
   "server": {
     "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "appId": "br.com.aquaprofish.app",
+      "autoUpdate": "atBackground",
+      "defaultChannel": "production",
+      "statsUrl": "",
+      "resetWhenUpdate": true,
+      "autoDeleteFailed": true,
+      "autoDeletePrevious": true
+    }
   }
 }
