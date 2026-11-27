@@ -1,0 +1,16 @@
+{
+  "id": "/AquaProFish/",
+  "name": "AquaProFish",
+  "short_name": "AquaProFish",
+  "description": "Gestão, criação e comunidade para aquaristas.",
+  "lang": "pt-BR",
+  "start_url": "/AquaProFish/",
+  "scope": "/AquaProFish/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#071a2b",
+  "theme_color": "#071a2b",
+  "icons": [
+    { "src": "/AquaProFish/aquaprofish-logo.png", "sizes": "192x192 512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
