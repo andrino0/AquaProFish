@@ -34,6 +34,9 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Set Android compile SDK 35 for Capgo dependency
+        run: sed -i 's/compileSdkVersion = 34/compileSdkVersion = 35/' android/variables.gradle
+
       - name: Sync Capacitor plugins
         run: npx cap sync android
 
