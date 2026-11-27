@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:netlify": "node scripts/fetch-apk.mjs && vite build",
     "preview": "vite preview",
     "build:android": "vite build --base=./"
   },
