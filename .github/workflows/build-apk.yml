@@ -47,34 +47,44 @@ jobs:
           NODE
           npx capacitor-assets generate --android
 
-      - name: Force official logo into Android launcher resources
+      - name: Set Android app version
+        run: |
+          sed -i -E "s/versionCode [0-9]+/versionCode ${GITHUB_RUN_NUMBER}/" android/app/build.gradle
+          sed -i -E "s/versionName \"[^\"]+\"/versionName \"1.0.${GITHUB_RUN_NUMBER}\"/" android/app/build.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
+      - name: Sync Android project
+        run: npx cap sync android
+      - name: Write verified AquaProFish launcher icon resources
         run: |
           node --input-type=module <<'NODE'
           import sharp from 'sharp';
           import fs from 'node:fs/promises';
           const logo = Buffer.from(await fs.readFile('public/aquaprofish-logo.svg'));
           const root = 'android/app/src/main/res';
-          const densities = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
-          for (const [density, size] of Object.entries(densities)) {
+          const sizes = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
+          for (const [density, size] of Object.entries(sizes)) {
             const dir = `${root}/mipmap-${density}`;
             await fs.mkdir(dir, { recursive: true });
             const icon = await sharp({ create: { width: size, height: size, channels: 4, background: '#071a2b' } })
-              .composite([{ input: await sharp(logo).resize(Math.round(size * 0.82), Math.round(size * 0.72), { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
+              .composite([{ input: await sharp(logo).resize(Math.round(size * 0.88), Math.round(size * 0.74), { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
               .png().toBuffer();
             await fs.writeFile(`${dir}/ic_launcher.png`, icon);
             await fs.writeFile(`${dir}/ic_launcher_round.png`, icon);
           }
+          const drawable = `${root}/drawable`;
+          const values = `${root}/values`;
+          const adaptiveDir = `${root}/mipmap-anydpi-v26`;
+          await fs.mkdir(drawable, { recursive: true });
+          await fs.mkdir(values, { recursive: true });
+          await fs.mkdir(adaptiveDir, { recursive: true });
           const foreground = await sharp({ create: { width: 432, height: 432, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
-            .composite([{ input: await sharp(logo).resize(280, 236, { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
+            .composite([{ input: await sharp(logo).resize(330, 278, { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
             .png().toBuffer();
-          await fs.mkdir(`${root}/mipmap-xxxhdpi`, { recursive: true });
-          await fs.writeFile(`${root}/mipmap-xxxhdpi/ic_launcher_foreground.png`, foreground);
-          await fs.mkdir(`${root}/drawable`, { recursive: true });
-          await fs.writeFile(`${root}/drawable/ic_launcher_background.xml`, '<resources><color name="ic_launcher_background">#071a2b</color></resources>');
-          await fs.mkdir(`${root}/mipmap-anydpi-v26`, { recursive: true });
-          const adaptive = '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@drawable/ic_launcher_background"/><foreground android:drawable="@mipmap/ic_launcher_foreground"/></adaptive-icon>';
-          await fs.writeFile(`${root}/mipmap-anydpi-v26/ic_launcher.xml`, adaptive);
-          await fs.writeFile(`${root}/mipmap-anydpi-v26/ic_launcher_round.xml`, adaptive);
+          await fs.writeFile(`${drawable}/ic_launcher_foreground.png`, foreground);
+          await fs.writeFile(`${values}/ic_launcher_background.xml`, '<resources><color name="ic_launcher_background">#071a2b</color></resources>');
+          const adaptive = '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/ic_launcher_background"/><foreground android:drawable="@drawable/ic_launcher_foreground"/></adaptive-icon>';
+          await fs.writeFile(`${adaptiveDir}/ic_launcher.xml`, adaptive);
+          await fs.writeFile(`${adaptiveDir}/ic_launcher_round.xml`, adaptive);
           NODE
       - name: Set Android app version
         run: |
