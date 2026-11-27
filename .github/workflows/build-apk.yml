@@ -54,7 +54,7 @@ jobs:
           grep -E "versionCode|versionName" android/app/build.gradle
       - name: Sync Android project
         run: npx cap sync android
-      - name: Write verified AquaProFish launcher icon resources
+      - name: Apply the same PNG launcher icon method as DinheiroFacil
         run: |
           node --input-type=module <<'NODE'
           import sharp from 'sharp';
@@ -71,20 +71,10 @@ jobs:
             await fs.writeFile(`${dir}/ic_launcher.png`, icon);
             await fs.writeFile(`${dir}/ic_launcher_round.png`, icon);
           }
-          const drawable = `${root}/drawable`;
-          const values = `${root}/values`;
           const adaptiveDir = `${root}/mipmap-anydpi-v26`;
-          await fs.mkdir(drawable, { recursive: true });
-          await fs.mkdir(values, { recursive: true });
-          await fs.mkdir(adaptiveDir, { recursive: true });
-          const foreground = await sharp({ create: { width: 432, height: 432, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
-            .composite([{ input: await sharp(logo).resize(330, 278, { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
-            .png().toBuffer();
-          await fs.writeFile(`${drawable}/ic_launcher_foreground.png`, foreground);
-          await fs.writeFile(`${values}/ic_launcher_background.xml`, '<resources><color name="ic_launcher_background">#071a2b</color></resources>');
-          const adaptive = '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/ic_launcher_background"/><foreground android:drawable="@drawable/ic_launcher_foreground"/></adaptive-icon>';
-          await fs.writeFile(`${adaptiveDir}/ic_launcher.xml`, adaptive);
-          await fs.writeFile(`${adaptiveDir}/ic_launcher_round.xml`, adaptive);
+          await fs.rm(`${adaptiveDir}/ic_launcher.xml`, { force: true });
+          await fs.rm(`${adaptiveDir}/ic_launcher_round.xml`, { force: true });
+          console.log('PNG launcher icons written for all Android densities; adaptive XML icons removed.');
           NODE
       - name: Build debug APK
         working-directory: android
