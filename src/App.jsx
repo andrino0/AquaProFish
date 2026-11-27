@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { supabase } from './lib/supabase.js';
 import {
   Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Download, Droplets,
-  Fish, Heart, HeartPulse, Home, Menu, MessageCircle, Pencil, Plus, Search, Settings,
+  Fish, Heart, HeartPulse, Home, Menu, MessageCircle, Pencil, Plus, Search, Settings, Trash2,
   Sparkles, Thermometer, Waves, X, Copy
 } from 'lucide-react';
 
@@ -111,7 +111,7 @@ function Dashboard({ user, onSignOut }) {
         const likes = likeResult.data || [];
         const comments = commentResult.data || [];
         setPosts((postResult.data || []).map(p => ({
-          id: p.id, author: profiles.find(profile => profile.id === p.user_id)?.display_name || 'Aquarista',
+          id: p.id, userId: p.user_id, author: profiles.find(profile => profile.id === p.user_id)?.display_name || 'Aquarista',
           time: new Date(p.created_at).toLocaleString('pt-BR'), text: p.content,
           likes: likes.filter(like => like.post_id === p.id).length,
           likedByMe: likes.some(like => like.post_id === p.id && like.user_id === user.id),
@@ -227,7 +227,7 @@ function Dashboard({ user, onSignOut }) {
       user_id: user.id, content: form.text.trim()
     }).select().single();
     if (error) { setSaveError('Não foi possível publicar: ' + error.message); return; }
-    setPosts([{ id: data.id, author: user.user_metadata?.display_name || user.user_metadata?.name || 'Você', time: 'Agora', text: data.content, likes: 0, likedByMe: false, comments: [], tag: 'Comunidade' }, ...posts]);
+    setPosts([{ id: data.id, userId: user.id, author: user.user_metadata?.display_name || user.user_metadata?.name || 'Você', time: 'Agora', text: data.content, likes: 0, likedByMe: false, comments: [], tag: 'Comunidade' }, ...posts]);
     setModal('');
   }
 
@@ -308,6 +308,49 @@ function Dashboard({ user, onSignOut }) {
     const { error } = await supabase.from('tasks').update({ completed }).eq('id', id);
     if (error) { setSaveError('Não foi possível atualizar a tarefa: ' + error.message); return; }
     save(tasks.map(t => t.id === id ? { ...t, done: completed } : t), setTasks);
+  }
+  async function deleteFish(fish) {
+    if (!window.confirm('Excluir o peixe "' + fish.name + '"? Esta ação não pode ser desfeita.')) return;
+    setSaveError('');
+    const { error } = await supabase.from('fish').delete().eq('id', fish.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir o peixe: ' + error.message); return; }
+    setFishList(current => current.filter(item => item.id !== fish.id));
+    if (fish.aquariumId) setTanks(current => current.map(t => t.id === fish.aquariumId ? { ...t, fish: Math.max(0, t.fish - Number(fish.count || 0)) } : t));
+  }
+
+  async function deleteTank(tank) {
+    const fishCount = fishList.filter(f => f.aquariumId === tank.id).length;
+    const warning = fishCount ? ' O banco também excluirá os ' + fishCount + ' cadastro(s) de peixe vinculados a este aquário.' : '';
+    if (!window.confirm('Excluir o aquário "' + tank.name + '"?' + warning + ' Esta ação não pode ser desfeita.')) return;
+    setSaveError('');
+    const { error } = await supabase.from('aquariums').delete().eq('id', tank.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir o aquário: ' + error.message); return; }
+    setTanks(current => current.filter(item => item.id !== tank.id));
+    setFishList(current => current.filter(item => item.aquariumId !== tank.id));
+  }
+
+  async function deleteTask(task) {
+    if (!window.confirm('Excluir a tarefa "' + task.title + '"?')) return;
+    setSaveError('');
+    const { error } = await supabase.from('tasks').delete().eq('id', task.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir a tarefa: ' + error.message); return; }
+    setTasks(current => current.filter(item => item.id !== task.id));
+  }
+
+  async function deletePost(post) {
+    if (!window.confirm('Excluir esta publicação? As curtidas e os comentários vinculados também serão removidos.')) return;
+    setSaveError('');
+    const { error } = await supabase.from('posts').delete().eq('id', post.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir a publicação: ' + error.message); return; }
+    setPosts(current => current.filter(item => item.id !== post.id));
+  }
+
+  async function deleteComment(postId, comment) {
+    if (!window.confirm('Excluir seu comentário?')) return;
+    setSaveError('');
+    const { error } = await supabase.from('post_comments').delete().eq('id', comment.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir o comentário: ' + error.message); return; }
+    setPosts(current => current.map(item => item.id === postId ? { ...item, comments: item.comments.filter(c => c.id !== comment.id) } : item));
   }
 
   function downloadFile(content, filename, mimeType) {
@@ -516,13 +559,13 @@ function Dashboard({ user, onSignOut }) {
             </div>
           </>}
 
-          {section === 'Aquários' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Ambientes cadastrados</h3><p>Seus aquários e parâmetros atuais</p></div><span className="count-label">{tanks.length} cadastrados</span></div>{tanks.length ? <div className="tank-cards">{tanks.map(t => <article className="tank-card" key={t.id}><div className="tank-card-top"><div className="tank-icon large"><Waves size={24}/></div><span className={t.status === 'Atenção' ? 'tag warning' : 'tag success'}>{t.status}</span></div><h3>{t.name}</h3><div className="tank-volume">{t.volume}</div><div className="parameter-grid"><div><Thermometer size={16}/><span>Temperatura</span><strong>{t.temperature}</strong></div><div><Activity size={16}/><span>pH</span><strong>{t.ph}</strong></div><div><Fish size={16}/><span>Peixes</span><strong>{t.fish}</strong></div></div><div className="tank-card-actions"><button type="button" className="text-button" onClick={() => editTank(t)}><Pencil size={15}/> Editar aquário</button></div></article>)}</div> : <Empty title="Nenhum aquário cadastrado" text="Adicione seu primeiro aquário para começar."/>}</section>}
+          {section === 'Aquários' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Ambientes cadastrados</h3><p>Seus aquários e parâmetros atuais</p></div><span className="count-label">{tanks.length} cadastrados</span></div>{tanks.length ? <div className="tank-cards">{tanks.map(t => <article className="tank-card" key={t.id}><div className="tank-card-top"><div className="tank-icon large"><Waves size={24}/></div><span className={t.status === 'Atenção' ? 'tag warning' : 'tag success'}>{t.status}</span></div><h3>{t.name}</h3><div className="tank-volume">{t.volume}</div><div className="parameter-grid"><div><Thermometer size={16}/><span>Temperatura</span><strong>{t.temperature}</strong></div><div><Activity size={16}/><span>pH</span><strong>{t.ph}</strong></div><div><Fish size={16}/><span>Peixes</span><strong>{t.fish}</strong></div></div><div className="tank-card-actions"><button type="button" className="text-button" onClick={() => editTank(t)}><Pencil size={15}/> Editar aquário</button><button type="button" className="danger-icon-button" onClick={() => deleteTank(t)} aria-label="Excluir aquário" title="Excluir aquário"><Trash2 size={15}/></button></div></article>)}</div> : <Empty title="Nenhum aquário cadastrado" text="Adicione seu primeiro aquário para começar."/>}</section>}
 
-          {section === 'Meus peixes' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Cadastro de peixes</h3><p>Pesquise e acompanhe seus animais</p></div><div className="search-box"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar peixe..."/></div></div><div className="fish-table"><div className="table-head"><span>PEIXE / VARIEDADE</span><span>ESPÉCIE</span><span>AQUÁRIO</span><span>QUANTIDADE</span></div>{filteredFish.map(f => <div className="table-row" key={f.id}><div className="fish-name"><div className="fish-avatar"><Fish size={19}/></div><strong>{f.name}</strong></div><span>{f.species}</span><span>{f.tank}</span><div className="fish-count-actions"><strong>{f.count}</strong><button type="button" className="text-button" onClick={() => editFish(f)}><Pencil size={14}/> Editar</button></div></div>)}{!filteredFish.length && <Empty title="Nenhum peixe encontrado" text="Tente outro termo de busca ou cadastre um peixe."/>}</div></section>}
+          {section === 'Meus peixes' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Cadastro de peixes</h3><p>Pesquise e acompanhe seus animais</p></div><div className="search-box"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar peixe..."/></div></div><div className="fish-table"><div className="table-head"><span>PEIXE / VARIEDADE</span><span>ESPÉCIE</span><span>AQUÁRIO</span><span>QUANTIDADE</span></div>{filteredFish.map(f => <div className="table-row" key={f.id}><div className="fish-name"><div className="fish-avatar"><Fish size={19}/></div><strong>{f.name}</strong></div><span>{f.species}</span><span>{f.tank}</span><div className="fish-count-actions"><strong>{f.count}</strong><button type="button" className="text-button" onClick={() => editFish(f)}><Pencil size={14}/> Editar</button><button type="button" className="danger-icon-button" onClick={() => deleteFish(f)} aria-label="Excluir peixe" title="Excluir peixe"><Trash2 size={14}/></button></div></div>)}{!filteredFish.length && <Empty title="Nenhum peixe encontrado" text="Tente outro termo de busca ou cadastre um peixe."/>}</div></section>}
 
-          {section === 'Rotina' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Rotina de cuidados</h3><p>Marque as atividades conforme forem concluídas</p></div><span className="count-label">{tasks.filter(t=>t.done).length} de {tasks.length} concluídas</span></div><div className="progress-track"><div style={{width: (tasks.length ? tasks.filter(t=>t.done).length/tasks.length*100 : 0) + '%'}}/></div><div className="routine-list">{tasks.map(t => <label className={`task-row routine-task ${t.done ? 'task-done' : ''}`} key={t.id}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}</small></span><span className={t.done ? 'tag success' : 'tag warning'}>{t.done ? 'Concluída' : 'Pendente'}</span></label>)}</div><p className="note">Nesta primeira versão, as tarefas são salvas neste dispositivo. Lembretes automáticos serão adicionados na próxima etapa.</p></section>}
+          {section === 'Rotina' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Rotina de cuidados</h3><p>Marque as atividades conforme forem concluídas</p></div><span className="count-label">{tasks.filter(t=>t.done).length} de {tasks.length} concluídas</span></div><div className="progress-track"><div style={{width: (tasks.length ? tasks.filter(t=>t.done).length/tasks.length*100 : 0) + '%'}}/></div><div className="routine-list">{tasks.map(t => <div className="routine-task-wrap" key={t.id}><label className={`task-row routine-task ${t.done ? 'task-done' : ''}`}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}</small></span><span className={t.done ? 'tag success' : 'tag warning'}>{t.done ? 'Concluída' : 'Pendente'}</span></label><button type="button" className="danger-icon-button" onClick={() => deleteTask(t)} aria-label="Excluir tarefa" title="Excluir tarefa"><Trash2 size={15}/></button></div>)}</div><p className="note">Nesta primeira versão, as tarefas são salvas neste dispositivo. Lembretes automáticos serão adicionados na próxima etapa.</p></section>}
 
-          {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Compartilhe experiências e acompanhe os aquaristas que estão conectados agora.</p></div></div><div className="online-panel"><div className="online-heading"><div><strong>Aquaristas online agora</strong><small>Presença em tempo real na comunidade</small></div><span className="online-count">{onlineUsers.length}</span></div>{onlineUsers.length ? <div className="online-list">{onlineUsers.map(person => <div className="online-person" key={person.user_id}><span className="online-avatar">{String(person.display_name || 'A').trim().charAt(0).toUpperCase()}</span><strong>{person.display_name || 'Aquarista'}</strong><i title="Online agora"/></div>)}</div> : <p className="online-empty">Ainda não há outros aquaristas conectados. Quando alguém entrar, aparecerá aqui.</p>}</div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div><p>{post.text}</p><div className="post-actions">
+          {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Compartilhe experiências e acompanhe os aquaristas que estão conectados agora.</p></div></div><div className="online-panel"><div className="online-heading"><div><strong>Aquaristas online agora</strong><small>Presença em tempo real na comunidade</small></div><span className="online-count">{onlineUsers.length}</span></div>{onlineUsers.length ? <div className="online-list">{onlineUsers.map(person => <div className="online-person" key={person.user_id}><span className="online-avatar">{String(person.display_name || 'A').trim().charAt(0).toUpperCase()}</span><strong>{person.display_name || 'Aquarista'}</strong><i title="Online agora"/></div>)}</div> : <p className="online-empty">Ainda não há outros aquaristas conectados. Quando alguém entrar, aparecerá aqui.</p>}</div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div>{post.userId === user.id && <button type="button" className="danger-icon-button post-delete-button" onClick={() => deletePost(post)} aria-label="Excluir publicação" title="Excluir publicação"><Trash2 size={15}/></button>}<p>{post.text}</p><div className="post-actions">
                   <button type="button" className={post.likedByMe ? 'post-action liked' : 'post-action'} onClick={() => toggleLike(post.id)} disabled={!!likeBusy[post.id]}>
                     <Heart size={17} fill={post.likedByMe ? 'currentColor' : 'none'}/> {post.likes} {post.likes === 1 ? 'curtida' : 'curtidas'}
                   </button>
@@ -533,7 +576,7 @@ function Dashboard({ user, onSignOut }) {
                 {expandedComments[post.id] && <div className="post-comments">
                   {(post.comments || []).length ? <div className="comment-list">{post.comments.map(comment => <div className="comment-item" key={comment.id}>
                     <div className="comment-avatar">{String(comment.author || 'A').trim().charAt(0).toUpperCase()}</div>
-                    <div className="comment-body"><strong>{comment.author}</strong><p>{comment.text}</p><small>{comment.time}</small></div>
+                    <div className="comment-body"><strong>{comment.author}</strong><p>{comment.text}</p><small>{comment.time}</small></div>{comment.userId === user.id && <button type="button" className="danger-icon-button comment-delete-button" onClick={() => deleteComment(post.id, comment)} aria-label="Excluir comentário" title="Excluir comentário"><Trash2 size={13}/></button>}
                   </div>)}</div> : <p className="comments-empty">Seja o primeiro a comentar.</p>}
                   <form className="comment-form" onSubmit={event => { event.preventDefault(); submitComment(post.id); }}>
                     <input aria-label="Escreva um comentário" value={commentDrafts[post.id] || ''} onChange={event => setCommentDrafts(current => ({ ...current, [post.id]: event.target.value }))} placeholder="Escreva um comentário..." maxLength={2000}/>
