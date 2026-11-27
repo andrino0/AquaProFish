@@ -16,3 +16,9 @@
 .auth-brand{width:100%;display:flex;justify-content:center;align-items:center;margin:0 auto 28px;padding:0}
 .auth-brand img{width:100%;max-width:300px;height:190px;max-height:none;object-fit:contain;object-position:center;margin:0 auto}
 @media(max-width:760px){.brand{min-height:130px;padding-bottom:22px}.brand-logo{max-width:175px;height:115px}.auth-brand img{max-width:260px;height:165px}}
+
+/* Correção final da tela de acesso: logo inteiro e centralizado */
+.auth-card{width:min(440px,100%);margin:0 auto}
+.auth-brand{display:flex!important;width:100%;justify-content:center!important;align-items:center!important;text-align:center;margin:0 auto 26px!important;padding:0!important}
+.auth-brand img{display:block!important;flex:0 1 280px;width:100%!important;max-width:280px!important;height:236px!important;max-height:none!important;object-fit:contain!important;object-position:center!important;margin:0 auto!important}
+@media(max-width:760px){.auth-card{width:min(440px,100%);padding:24px 20px}.auth-brand img{flex-basis:250px;max-width:250px!important;height:210px!important}}
