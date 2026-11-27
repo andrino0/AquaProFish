@@ -34,6 +34,17 @@ jobs:
         run: npx @capgo/cli@latest bundle upload br.com.aquaprofish.app --path ./dist --channel production --apikey "$CAPGO_API_KEY" --auto-bump patch
       - name: Add Android platform
         run: npx cap add android
+      - name: Set Android compile SDK 35 required by Capgo updater
+        run: |
+          if [ -f android/variables.gradle ]; then
+            sed -i -E 's/(compileSdkVersion[[:space:]]*=[[:space:]]*)[0-9]+/\135/' android/variables.gradle
+          fi
+          if [ -f android/app/build.gradle ]; then
+            sed -i -E 's/(compileSdk[[:space:]]+)[0-9]+/\135/' android/app/build.gradle
+          fi
+          echo "Android compile SDK configuration:"
+          grep -R -n -E 'compileSdk(Version)?[[:space:]]*[= ]' android/variables.gradle android/app/build.gradle || true
+
       - name: Prepare official AquaProFish icon and splash
         run: |
           npm install --no-save sharp @capacitor/assets
