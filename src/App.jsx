@@ -46,7 +46,7 @@ const speciesGuide = [
   },
   {
     name: 'Platy', latin: 'Xiphophorus maculatus',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_maculatus_Platy.JPG?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_maculatus.jpg',
     summary: 'Vivíparo sociável, resistente e disponível em muitas cores.',
     origin: 'América Central, em águas doces e ambientes de correnteza fraca.',
     size: 'Cerca de 4–6 cm.',
@@ -76,7 +76,7 @@ const speciesGuide = [
   },
   {
     name: 'Molinésia', latin: 'Poecilia sphenops',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/PoeciliaSphenops.jpg?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Poecilia_sphenops.jpg',
     summary: 'Vivíparo robusto, com grande variedade de formas e cores.',
     origin: 'México e América Central; algumas populações vivem em águas com diferentes níveis de salinidade.',
     size: 'Em geral 6–10 cm, dependendo da variedade e da linhagem.',
