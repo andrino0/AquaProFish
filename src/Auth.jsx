@@ -66,7 +66,7 @@ export default function Auth() {
       <div className="auth-brand" style={{justifyContent:'center',gap:14}}>
         <img className="auth-logo" src={`${import.meta.env.BASE_URL}aquaprofish-logo-original.png`} alt="Logomarca AquaProFish" style={{width:'100%',maxWidth:170,height:90,objectFit:'contain',flex:'0 1 170px'}} />
         <div style={{flex:'0 0 auto',textAlign:'left'}}>
-          <strong style={{fontSize:29}}>AquaPro<span>Fish</span></strong>
+          <strong style={{fontSize:32,lineHeight:1.12,letterSpacing:"0.1px"}}>AquaPro<span>Fish</span></strong>
           <small>GESTÃO • CRIAÇÃO • COMUNIDADE</small>
         </div>
       </div>
