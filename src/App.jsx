@@ -22,6 +22,8 @@ function readStore(key, fallback) {
 }
 
 function Dashboard({ user, onSignOut }) {
+  const displayName = user?.user_metadata?.display_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Aquarista';
+  const avatarInitial = String(displayName).trim().charAt(0).toUpperCase() || 'A';
   const [section, setSection] = useState('Início');
   const [tanks, setTanks] = useState(initialTanks);
   const [fishList, setFishList] = useState(initialFish);
@@ -299,7 +301,7 @@ function Dashboard({ user, onSignOut }) {
             <Download size={18}/><span>Baixe aqui o app</span>
           </a>
           <button className="nav-item"><Settings size={19}/><span>Configurações</span></button>
-          <div className="profile"><div className="avatar">A</div><div><strong>Aquarista</strong><small>Minha conta</small></div></div>
+          <div className="profile"><div className="avatar">{avatarInitial}</div><div><strong>{displayName}</strong><small>Minha conta</small></div></div>
         </div>
       </aside>
 
