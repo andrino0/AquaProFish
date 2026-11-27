@@ -14,4 +14,4 @@
 /* Cabeçalho original AquaProFish: ícone azul e nome */
 .brand-mark{position:relative;width:42px;height:42px;flex:0 0 42px;border-radius:12px;background:linear-gradient(145deg,#087fa7,#12496b);display:flex;align-items:center;justify-content:center;color:#65d9ed;box-shadow:0 5px 14px #001b2b80}.brand-mark svg:first-child{position:absolute;left:8px;top:9px;opacity:.8}.brand-mark svg:last-child{position:absolute;right:6px;bottom:7px;color:#d9faff;filter:drop-shadow(0 2px 2px #07506c)}
 
-@media(max-width:420px){.auth-brand .auth-logo{max-width:145px!important;height:82px!important;flex-basis:145px!important}.auth-brand strong{font-size:21px!important}.auth-brand{gap:9px!important}}
+@media(max-width:420px){.auth-brand .auth-logo{max-width:145px!important;height:82px!important;flex-basis:145px!important}.auth-brand strong{font-size:25px!important}.auth-brand{gap:9px!important}}
