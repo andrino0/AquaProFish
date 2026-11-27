@@ -1,13 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190" role="img" aria-labelledby="title desc">
-<title id="title">AquaProFish</title><desc id="desc">Logotipo com gota azul, peixe escuro, plantas verdes e ondas.</desc>
-<defs><linearGradient id="drop" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#22d7f4"/><stop offset="1" stop-color="#0874c8"/></linearGradient><linearGradient id="wave" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#087acb"/><stop offset="1" stop-color="#22c7ed"/></linearGradient></defs>
-<g transform="translate(8 8)">
-<path d="M82 3C65 35 12 85 12 124a70 70 0 0 0 140 0C152 85 99 35 82 3Z" fill="url(#drop)"/>
-<path d="M24 126c17-10 27-30 45-34 17-4 31 5 46 3-10 12-21 20-38 21 17 9 35 8 51 1-12 25-38 39-66 33-17-4-29-12-38-24Z" fill="#092b50"/>
-<circle cx="106" cy="103" r="4.5" fill="#fff"/>
-<path d="M42 145c-9-18-9-38-3-55 10 13 15 29 14 44 5-23 19-39 37-50-2 22-11 42-27 56 18-12 36-15 54-11-16 20-38 29-64 25Z" fill="#69bd35"/>
-<path d="M21 159c34 16 89 16 122-1" fill="none" stroke="url(#wave)" stroke-width="7" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" role="img" aria-labelledby="title desc">
+<title id="title">AquaProFish — Seu hobby, mais organizado!</title>
+<desc id="desc">Gota azul envolvendo um peixe azul-escuro e plantas verdes, com o nome AquaProFish em azul e verde e ondas azuis.</desc>
+<defs>
+ <linearGradient id="drop" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20d5f2"/><stop offset=".55" stop-color="#078bd4"/><stop offset="1" stop-color="#0756a2"/></linearGradient>
+ <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#0878c8"/><stop offset=".55" stop-color="#13b9e5"/><stop offset="1" stop-color="#0875c3"/></linearGradient>
+ <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8ddd35"/><stop offset="1" stop-color="#319b25"/></linearGradient>
+</defs>
+<g transform="translate(18 12)">
+ <path d="M145 8C111 70 18 143 18 235a128 128 0 0 0 256 0C274 143 179 70 145 8Z" fill="none" stroke="url(#drop)" stroke-width="19" stroke-linejoin="round"/>
+ <path d="M68 207c27-38 62-56 102-47 24 5 42 1 66-13-10 28-31 48-58 56 19 9 40 10 61 1-23 35-63 48-101 33-30-12-51-22-70-30Z" fill="#082d53"/>
+ <path d="M79 206c-16-18-22-39-19-63 21 17 34 38 38 62 6-36 26-66 57-88-1 37-15 70-43 95 32-20 65-23 98-12-30 31-68 43-111 34-8-2-15-6-20-10Z" fill="url(#leaf)"/>
+ <path d="M45 273c35 29 88 44 145 35" fill="none" stroke="url(#wave)" stroke-width="12" stroke-linecap="round"/>
+ <circle cx="220" cy="166" r="7" fill="#fff"/>
 </g>
-<text x="180" y="102" font-family="Arial,sans-serif" font-size="69" font-weight="800" letter-spacing="-3" fill="#102f50">AquaPro<tspan fill="#16a9d3">Fish</tspan></text>
-<text x="185" y="139" font-family="Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="3" fill="#78a9bd">GESTÃO • CRIAÇÃO • COMUNIDADE</text>
+<text x="310" y="205" font-family="Arial,sans-serif" font-size="112" font-style="italic" font-weight="800" letter-spacing="-6" fill="#0a3158">AquaPro<tspan fill="#45a92e">Fish</tspan></text>
+<text x="365" y="264" font-family="Arial,sans-serif" font-size="36" font-style="italic" fill="#12385c">Seu hobby, mais organizado!</text>
+<path d="M285 318c150 72 380 66 555-4" fill="none" stroke="url(#wave)" stroke-width="19" stroke-linecap="round"/>
+<path d="M315 353c145 54 345 52 500-2" fill="none" stroke="#0878c8" stroke-width="10" stroke-linecap="round"/>
 </svg>
