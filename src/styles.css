@@ -102,3 +102,13 @@
 .settings-about strong{font-size:11px;color:#d8eaf2}
 .settings-signout{cursor:pointer}
 @media(max-width:520px){.settings-actions{display:grid;grid-template-columns:1fr}.settings-actions>*{width:100%;min-height:44px}.settings-about{grid-template-columns:1fr;gap:4px}.settings-about strong{margin-bottom:8px}}
+
+/* Ações de exclusão com confirmação */
+.tank-card-actions,.fish-count-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.danger-icon-button{display:inline-flex;align-items:center;justify-content:center;min-width:30px;min-height:30px;padding:6px;border:1px solid #633b43;border-radius:7px;background:#301d27;color:#f19aa1;cursor:pointer}
+.danger-icon-button:hover{background:#48242e;color:#ffc0c4}
+.routine-task-wrap{display:flex;align-items:center;gap:8px;border-bottom:1px solid #173144}
+.routine-task-wrap .routine-task{flex:1;min-width:0;border:0}
+.post-author{flex:1}
+.post-delete-button{margin-left:auto}
+.comment-delete-button{flex:0 0 auto;margin-left:4px}
