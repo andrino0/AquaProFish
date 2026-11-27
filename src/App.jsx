@@ -152,7 +152,7 @@ function Dashboard({ user, onSignOut }) {
   const filteredFish = fishList.filter(f => (f.name + ' ' + f.species + ' ' + f.tank).toLowerCase().includes(query.toLowerCase()));
 
   function editTank(tank) {
-    setForm({ id: tank.id, name: tank.name, volume: tank.volume === 'Não informado' ? '' : tank.volume, temperature: tank.temperature === '—' ? '' : tank.temperature, ph: tank.ph === '—' ? '' : tank.ph });
+    setForm({ id: tank.id, name: tank.name, volume: tank.volume === 'Não informado' ? '' : tank.volume, temperature: tank.temperature === '—' ? '' : tank.temperature, ph: tank.ph === '—' ? '' : tank.ph, status: tank.status || 'Novo' });
     setModal('editTank');
   }
 
@@ -161,11 +161,11 @@ function Dashboard({ user, onSignOut }) {
     if (!form.name?.trim()) return;
     setSaveError('');
     const volumeNumber = Number(String(form.volume || '').replace(',', '.').match(/[0-9]+(?:\.[0-9]+)?/)?.[0] || 0);
-    const values = { name: form.name.trim(), volume_liters: volumeNumber || null, volume_label: form.volume || null, temperature: form.temperature || null, ph: form.ph || null };
+    const values = { name: form.name.trim(), volume_liters: volumeNumber || null, volume_label: form.volume || null, temperature: form.temperature || null, ph: form.ph || null, status: form.status || 'Novo' };
     if (modal === 'editTank') {
       const { data, error } = await supabase.from('aquariums').update(values).eq('id', form.id).eq('user_id', user.id).select().single();
       if (error) { setSaveError('Não foi possível atualizar o aquário: ' + error.message); return; }
-      setTanks(tanks.map(t => t.id === data.id ? { ...t, name: data.name, volume: data.volume_label || (data.volume_liters ? `${data.volume_liters} L` : 'Não informado'), temperature: data.temperature || '—', ph: data.ph || '—' } : t));
+      setTanks(tanks.map(t => t.id === data.id ? { ...t, name: data.name, volume: data.volume_label || (data.volume_liters ? `${data.volume_liters} L` : 'Não informado'), temperature: data.temperature || '—', ph: data.ph || '—', status: data.status || 'Novo' } : t));
     } else {
       const { data, error } = await supabase.from('aquariums').insert({ user_id: user.id, ...values, status: 'Novo' }).select().single();
       if (error) { setSaveError('Não foi possível salvar o aquário: ' + error.message); return; }
@@ -589,7 +589,7 @@ function Dashboard({ user, onSignOut }) {
       {mobileMenu && <button className="mobile-scrim" onClick={() => setMobileMenu(false)} aria-label="Fechar menu"/>}
 
       {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' ? submitTask : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
-        {(modal === 'tank' || modal === 'editTank') && <><Field label="Nome do aquário *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Aquário da sala"/><div className="form-two"><Field label="Volume" value={form.volume || ''} onChange={v=>setForm({...form,volume:v})} placeholder="Ex.: 100 L"/><Field label="Temperatura" value={form.temperature || ''} onChange={v=>setForm({...form,temperature:v})} placeholder="Ex.: 26 °C"/></div><Field label="pH atual" value={form.ph || ''} onChange={v=>setForm({...form,ph:v})} placeholder="Ex.: 7,0"/></>}
+        {(modal === 'tank' || modal === 'editTank') && <><Field label="Nome do aquário *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Aquário da sala"/><div className="form-two"><Field label="Volume" value={form.volume || ''} onChange={v=>setForm({...form,volume:v})} placeholder="Ex.: 100 L"/><Field label="Temperatura" value={form.temperature || ''} onChange={v=>setForm({...form,temperature:v})} placeholder="Ex.: 26 °C"/></div><Field label="pH atual" value={form.ph || ''} onChange={v=>setForm({...form,ph:v})} placeholder="Ex.: 7,0"/><label className="field"><span>Situação do aquário</span><select value={form.status || 'Novo'} onChange={e=>setForm({...form,status:e.target.value})}><option value="Novo">Ainda não avaliado</option><option value="Estável">Estável</option><option value="Atenção">Precisa de atenção</option></select></label></>}
         {(modal === 'fish' || modal === 'editFish') && <><Field label="Nome / variedade *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Guppy Full Red"/><Field label="Espécie" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Poecilia reticulata"/><div className="form-two"><label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(t=><option key={t.id} value={t.id}>{t.name} ({t.volume})</option>)}</select></label><Field label="Quantidade" value={form.count ?? '0'} onChange={v=>setForm({...form,count:v})} placeholder="0" type="number"/></div></>}
         {modal === 'task' && <><Field label="Nome da tarefa *" value={form.title || ''} onChange={v=>setForm({...form,title:v})} placeholder="Ex.: Alimentar os peixes"/><Field label="Detalhes" value={form.detail || ''} onChange={v=>setForm({...form,detail:v})} placeholder="Ex.: Pela manhã, pequena quantidade"/></>}
         {modal === 'post' && <Field label="O que você gostaria de compartilhar?" value={form.text || ''} onChange={v=>setForm({...form,text:v})} placeholder="Conte uma experiência ou faça uma pergunta..." area/>}
