@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190" role="img" aria-labelledby="title desc">
+<title id="title">AquaProFish</title><desc id="desc">Logotipo com gota azul, peixe escuro, plantas verdes e ondas.</desc>
+<defs><linearGradient id="drop" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#22d7f4"/><stop offset="1" stop-color="#0874c8"/></linearGradient><linearGradient id="wave" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#087acb"/><stop offset="1" stop-color="#22c7ed"/></linearGradient></defs>
+<g transform="translate(8 8)">
+<path d="M82 3C65 35 12 85 12 124a70 70 0 0 0 140 0C152 85 99 35 82 3Z" fill="url(#drop)"/>
+<path d="M24 126c17-10 27-30 45-34 17-4 31 5 46 3-10 12-21 20-38 21 17 9 35 8 51 1-12 25-38 39-66 33-17-4-29-12-38-24Z" fill="#092b50"/>
+<circle cx="106" cy="103" r="4.5" fill="#fff"/>
+<path d="M42 145c-9-18-9-38-3-55 10 13 15 29 14 44 5-23 19-39 37-50-2 22-11 42-27 56 18-12 36-15 54-11-16 20-38 29-64 25Z" fill="#69bd35"/>
+<path d="M21 159c34 16 89 16 122-1" fill="none" stroke="url(#wave)" stroke-width="7" stroke-linecap="round"/>
+</g>
+<text x="180" y="102" font-family="Arial,sans-serif" font-size="69" font-weight="800" letter-spacing="-3" fill="#102f50">AquaPro<tspan fill="#16a9d3">Fish</tspan></text>
+<text x="185" y="139" font-family="Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="3" fill="#78a9bd">GESTÃO • CRIAÇÃO • COMUNIDADE</text>
+</svg>
