@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Auth from './Auth.jsx';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from './lib/supabase.js';
 import {
   Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Download, Droplets,
@@ -297,9 +298,9 @@ function Dashboard({ user, onSignOut }) {
         </nav>
         <div className="sidebar-bottom">
           <div className="help-card"><Sparkles size={18}/><strong>Um aquário saudável começa com bons cuidados.</strong><span>Registre, acompanhe e evolua.</span></div>
-          <a className="app-download-nav" href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk" aria-label="Baixe aqui o app AquaProFish">
+          {!Capacitor.isNativePlatform() && <a className="app-download-nav" href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk" aria-label="Baixe aqui o app AquaProFish">
             <Download size={18}/><span>Baixe aqui o app</span>
-          </a>
+          </a>}
           <button className="nav-item"><Settings size={19}/><span>Configurações</span></button>
           <div className="profile"><div className="avatar">{avatarInitial}</div><div><strong>{displayName}</strong><small>Minha conta</small></div></div>
         </div>
@@ -368,7 +369,7 @@ function Dashboard({ user, onSignOut }) {
 
           {section === 'Guia de espécies' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Conheça as espécies</h3><p>Uma base inicial para organizar seu conhecimento</p></div><span className="tag info">Em expansão</span></div><div className="species-grid">{[['Guppy','Poecilia reticulata','Peixe vivíparo, ativo e muito apreciado pela variedade de cores.'],['Betta','Betta splendens','Peixe de personalidade marcante. Machos geralmente devem ser mantidos separados.'],['Platy','Xiphophorus maculatus','Vivíparo resistente e sociável, com muitas variedades.'],['Espada','Xiphophorus hellerii','Vivíparo conhecido pela extensão da nadadeira caudal dos machos.'],['Molinésia','Poecilia sphenops','Peixe vivíparo que aprecia água estável e alimentação variada.']].map(([name,latin,desc])=><article className="species-card" key={name}><div className="species-illustration"><Fish size={32}/></div><div><h3>{name}</h3><i>{latin}</i><p>{desc}</p></div></article>)}</div></section>}
         </div>
-        <div className="footer-download-wrap"><a className="footer-download" href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk"><Download size={16}/> Baixe aqui o app</a></div>
+        {!Capacitor.isNativePlatform() && <div className="footer-download-wrap"><a className="footer-download" href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk"><Download size={16}/> Baixe aqui o app</a></div>}
         <footer className="footer"><span className="footer-brand">AquaProFish · Gestão • Criação • Comunidade</span><span className="footer-developer">Desenvolvedor: <strong>Andrino Morales Botelho</strong></span><span>© 2026 AquaProFish. Todos os direitos reservados.</span></footer>
       </main>
 
