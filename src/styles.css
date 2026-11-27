@@ -60,3 +60,22 @@
 
 .footer-download-wrap{width:100%;display:flex;justify-content:center;align-items:center;padding:20px 16px 10px}
 .footer-download-wrap .footer-download{padding:11px 22px;font-size:13px}
+
+
+/* Apoio voluntário via Pix */
+.support-layout{max-width:760px;margin:0 auto}
+.support-card{position:relative;overflow:hidden;padding:30px;border:1px solid #1e5268;border-radius:18px;background:radial-gradient(circle at 90% 0%,#164b62 0,transparent 42%),linear-gradient(145deg,#102e42,#0b1e2d);box-shadow:0 16px 40px #0003}
+.support-heart{width:54px;height:54px;display:grid;place-items:center;border-radius:16px;background:#123f53;color:#54d0e1;margin-bottom:20px}
+.support-card .eyebrow{color:#55cde2;font-size:10px;font-weight:800;letter-spacing:1.5px}
+.support-card h2{margin:9px 0 10px;color:#effaff;font:800 25px Outfit,sans-serif}
+.support-card>p{max-width:600px;color:#a9c2d1;font-size:13px;line-height:1.7}
+.pix-key-panel{margin:23px 0 12px;padding:17px;border:1px dashed #39839b;border-radius:12px;background:#091a28}
+.pix-key-panel span,.pix-key-panel strong{display:block}
+.pix-key-panel span{font-size:9px;font-weight:800;letter-spacing:1.1px;color:#79a5b8}
+.pix-key-panel strong{margin-top:8px;color:#e8faff;font-size:21px;letter-spacing:.4px}
+.pix-copy-button{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:14px;border:0;border-radius:10px;background:linear-gradient(100deg,#0788a8,#08739a);color:#fff;font:800 13px 'DM Sans',sans-serif;cursor:pointer}
+.pix-copy-button:hover{filter:brightness(1.12)}
+.support-card .support-notice{margin:16px 0 0;padding-top:14px;border-top:1px solid #234458;font-size:11px;color:#89a8ba}
+.support-thanks{display:flex;align-items:center;justify-content:center;gap:7px;color:#7fa7b8;font-size:11px;margin:18px 0}
+.support-thanks svg{color:#53c7dc}
+@media(max-width:600px){.support-card{padding:22px 18px}.support-card h2{font-size:22px}.pix-key-panel strong{font-size:18px}}
