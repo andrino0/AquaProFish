@@ -46,6 +46,10 @@ Esses recursos serão conectados em uma próxima etapa com backend e banco de da
 5. Implementar comunidade real com publicações, fotos, comentários, curtidas, mensagens e moderação.
 6. Preparar instalação PWA e publicação no Netlify.
 
+## APK
+
+O deploy do Netlify baixa o APK mais recente publicado na release `apk-latest` do GitHub e o disponibiliza em `/download/AquaProFish.apk`.
+
 ## Licença
 
 A definir pelo mantenedor do projeto.
