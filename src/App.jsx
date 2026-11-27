@@ -16,7 +16,7 @@ const initialPosts = [];
 const speciesGuide = [
   {
     name: 'Guppy', latin: 'Poecilia reticulata',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Guppy_Guppies.png?width=1000', photoCredit: 'Lauren · CC BY-SA 4.0 · Wikimedia Commons',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Guppy_red_male.jpg?width=1000', photoCredit: 'Lauren · CC BY-SA 4.0 · Wikimedia Commons',
     summary: 'Pequeno vivíparo, ativo e famoso pela variedade de cores e caudas.',
     origin: 'América do Sul e Caribe; ocorre naturalmente em diferentes ambientes de água doce.',
     size: 'Machos geralmente 2–3 cm; fêmeas podem chegar a cerca de 5–6 cm.',
