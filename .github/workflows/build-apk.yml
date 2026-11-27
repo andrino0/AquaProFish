@@ -95,25 +95,63 @@ jobs:
           await fs.rm(`${adaptiveDir}/ic_launcher_round.xml`, { force: true });
           console.log('PNG launcher icons written for all Android densities; adaptive XML icons removed.');
           NODE
-      - name: Restore stable Android debug signing key
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: aquaprofish-android-debug-signing-key-v1
+      - name: Configure permanent AquaProFish release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/aquaprofish-release.jks
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const path = 'android/app/build.gradle';
+          let gradle = fs.readFileSync(path, 'utf8');
+          if (!gradle.includes('signingConfigs')) {
+            const marker = /    buildTypes\s*\{/;
+            if (!marker.test(gradle)) throw new Error('Could not find Android buildTypes block');
+            const signing = `    signingConfigs {
+                  release {
+                      storeFile file("aquaprofish-release.jks")
+                      storePassword System.getenv("KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("KEY_ALIAS")
+                      keyPassword System.getenv("KEY_PASSWORD")
+                  }
+              }
 
-      - name: Build debug APK
+          `;
+            gradle = gradle.replace(marker, signing + '    buildTypes {');
+          }
+          const releaseBlock = /(    buildTypes\s*\{\s*release\s*\{)/;
+          if (!releaseBlock.test(gradle)) throw new Error('Could not find release build type');
+          if (!/release\s*\{[^}]*signingConfig\s+signingConfigs\.release/s.test(gradle)) {
+            gradle = gradle.replace(releaseBlock, '$1\n            signingConfig signingConfigs.release');
+          }
+          fs.writeFileSync(path, gradle);
+          console.log('Permanent AquaProFish release signing configured.');
+          NODE
+
+      - name: Build signed release APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AquaProFish-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
 
       - name: Prepare APK download
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk AquaProFish.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk AquaProFish.apk
       - name: Publish latest test APK
         uses: softprops/action-gh-release@v2
         with:
