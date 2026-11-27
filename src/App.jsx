@@ -106,7 +106,7 @@ function Dashboard({ user, onSignOut }) {
           tank: dbTanks.find(t => t.id === f.aquarium_id)?.name || 'Sem aquário',
           count: f.quantity || 1
         })));
-        setTasks((taskResult.data || []).map(t => ({ id: t.id, title: t.title, detail: t.detail || '', done: t.completed })));
+        setTasks((taskResult.data || []).map(t => ({ id: t.id, title: t.title, detail: t.detail || '', dueDate: t.due_date || '', done: t.completed })));
         const profiles = profileResult.data || [];
         const likes = likeResult.data || [];
         const comments = commentResult.data || [];
@@ -207,15 +207,27 @@ function Dashboard({ user, onSignOut }) {
     setModal('');
   }
 
+  function editTask(task) {
+    const date = task.dueDate ? new Date(task.dueDate) : null;
+    const localDate = date && !Number.isNaN(date.getTime()) ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+    setForm({ id: task.id, title: task.title, detail: task.detail || '', dueDate: localDate });
+    setModal('editTask');
+  }
+
   async function submitTask(e) {
     e.preventDefault();
     if (!form.title?.trim()) return;
     setSaveError('');
-    const { data, error } = await supabase.from('tasks').insert({
-      user_id: user.id, title: form.title.trim(), detail: form.detail || null
-    }).select().single();
-    if (error) { setSaveError('Não foi possível salvar a tarefa: ' + error.message); return; }
-    setTasks([{ id: data.id, title: data.title, detail: data.detail || '', done: false }, ...tasks]);
+    const values = { title: form.title.trim(), detail: form.detail || null, due_date: form.dueDate ? new Date(form.dueDate).toISOString() : null };
+    if (modal === 'editTask') {
+      const { data, error } = await supabase.from('tasks').update(values).eq('id', form.id).eq('user_id', user.id).select().single();
+      if (error) { setSaveError('Não foi possível atualizar a tarefa: ' + error.message); return; }
+      setTasks(current => current.map(t => t.id === data.id ? { ...t, title: data.title, detail: data.detail || '', dueDate: data.due_date || '' } : t));
+    } else {
+      const { data, error } = await supabase.from('tasks').insert({ user_id: user.id, ...values }).select().single();
+      if (error) { setSaveError('Não foi possível salvar a tarefa: ' + error.message); return; }
+      setTasks(current => [{ id: data.id, title: data.title, detail: data.detail || '', dueDate: data.due_date || '', done: false }, ...current]);
+    }
     setModal('');
   }
 
@@ -419,10 +431,10 @@ function Dashboard({ user, onSignOut }) {
       if (failed) throw failed.error;
       const tanksById = new Map((aquariums.data || []).map(tank => [tank.id, tank]));
       const rows = [
-        ['Tipo', 'Nome', 'Detalhes', 'Aquário', 'Quantidade', 'Status'],
+        ['Tipo', 'Nome', 'Detalhes', 'Aquário', 'Quantidade', 'Status', 'Prazo'],
         ...(aquariums.data || []).map(t => ['Aquário', t.name, [t.volume_label || t.volume_liters || '', t.temperature || '', t.ph || ''].filter(Boolean).join(' | '), '', '', t.status || '']),
         ...(fish.data || []).map(f => ['Peixe', f.name, f.species || '', tanksById.get(f.aquarium_id)?.name || 'Sem aquário', f.quantity ?? '', '']),
-        ...(taskRows.data || []).map(t => ['Tarefa', t.title, t.detail || '', '', '', t.completed ? 'Concluída' : 'Pendente']),
+        ...(taskRows.data || []).map(t => ['Tarefa', t.title, t.detail || '', '', '', t.completed ? 'Concluída' : 'Pendente', t.due_date ? new Date(t.due_date).toLocaleString('pt-BR') : '']),
         ...(postRows.data || []).map(p => ['Publicação', '', p.content || '', '', '', ''])
       ];
       const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
@@ -554,7 +566,7 @@ function Dashboard({ user, onSignOut }) {
                 <div className="tank-list">{tanks.slice(0,3).map(t => <div className="tank-row" key={t.id} role="button" tabIndex={0} onClick={() => editTank(t)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') editTank(t); }}><div className="tank-icon"><Waves size={21}/></div><div className="tank-info"><strong>{t.name}</strong><small>{t.volume} • {t.fish} peixes</small></div><span className={t.status === 'Atenção' ? 'tag warning' : 'tag success'}>{t.status}</span></div>)}</div>
               </section>
               <section className="panel"><div className="panel-heading"><div><h3>Cuidados de hoje</h3><p>Não deixe a rotina passar</p></div><button className="text-button" onClick={() => setSection('Rotina')}>Ver rotina <ChevronRight size={15}/></button></div>
-                <div className="task-list">{tasks.slice(0,3).map(t => <label className={`task-row ${t.done ? 'task-done' : ''}`} key={t.id}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}</small></span></label>)}</div>
+                <div className="task-list">{tasks.slice(0,3).map(t => <label className={`task-row ${t.done ? 'task-done' : ''}`} key={t.id}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}{t.dueDate ? " • " + new Date(t.dueDate).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : ""}</small></span></label>)}</div>
               </section>
             </div>
           </>}
@@ -563,7 +575,7 @@ function Dashboard({ user, onSignOut }) {
 
           {section === 'Meus peixes' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Cadastro de peixes</h3><p>Pesquise e acompanhe seus animais</p></div><div className="search-box"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar peixe..."/></div></div><div className="fish-table"><div className="table-head"><span>PEIXE / VARIEDADE</span><span>ESPÉCIE</span><span>AQUÁRIO</span><span>QUANTIDADE</span></div>{filteredFish.map(f => <div className="table-row" key={f.id}><div className="fish-name"><div className="fish-avatar"><Fish size={19}/></div><strong>{f.name}</strong></div><span>{f.species}</span><span>{f.tank}</span><div className="fish-count-actions"><strong>{f.count}</strong><button type="button" className="text-button" onClick={() => editFish(f)}><Pencil size={14}/> Editar</button><button type="button" className="danger-icon-button" onClick={() => deleteFish(f)} aria-label="Excluir peixe" title="Excluir peixe"><Trash2 size={14}/></button></div></div>)}{!filteredFish.length && <Empty title="Nenhum peixe encontrado" text="Tente outro termo de busca ou cadastre um peixe."/>}</div></section>}
 
-          {section === 'Rotina' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Rotina de cuidados</h3><p>Marque as atividades conforme forem concluídas</p></div><span className="count-label">{tasks.filter(t=>t.done).length} de {tasks.length} concluídas</span></div><div className="progress-track"><div style={{width: (tasks.length ? tasks.filter(t=>t.done).length/tasks.length*100 : 0) + '%'}}/></div><div className="routine-list">{tasks.map(t => <div className="routine-task-wrap" key={t.id}><label className={`task-row routine-task ${t.done ? 'task-done' : ''}`}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}</small></span><span className={t.done ? 'tag success' : 'tag warning'}>{t.done ? 'Concluída' : 'Pendente'}</span></label><button type="button" className="danger-icon-button" onClick={() => deleteTask(t)} aria-label="Excluir tarefa" title="Excluir tarefa"><Trash2 size={15}/></button></div>)}</div><p className="note">Nesta primeira versão, as tarefas são salvas neste dispositivo. Lembretes automáticos serão adicionados na próxima etapa.</p></section>}
+          {section === 'Rotina' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Rotina de cuidados</h3><p>Marque as atividades conforme forem concluídas</p></div><span className="count-label">{tasks.filter(t=>t.done).length} de {tasks.length} concluídas</span></div><div className="progress-track"><div style={{width: (tasks.length ? tasks.filter(t=>t.done).length/tasks.length*100 : 0) + '%'}}/></div><div className="routine-list">{tasks.map(t => <div className="routine-task-wrap" key={t.id}><label className={`task-row routine-task ${t.done ? 'task-done' : ''}`}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}{t.dueDate ? " • Prazo: " + new Date(t.dueDate).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : " • Sem prazo definido"}</small></span><button type="button" className="text-button task-edit-button" onClick={() => editTask(t)} aria-label="Editar tarefa" title="Editar tarefa"><Pencil size={14}/></button><span className={t.done ? 'tag success' : 'tag warning'}>{t.done ? 'Concluída' : 'Pendente'}</span></label><button type="button" className="danger-icon-button" onClick={() => deleteTask(t)} aria-label="Excluir tarefa" title="Excluir tarefa"><Trash2 size={15}/></button></div>)}</div><p className="note">Nesta primeira versão, as tarefas são salvas neste dispositivo. Lembretes automáticos serão adicionados na próxima etapa.</p></section>}
 
           {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Compartilhe experiências e acompanhe os aquaristas que estão conectados agora.</p></div></div><div className="online-panel"><div className="online-heading"><div><strong>Aquaristas online agora</strong><small>Presença em tempo real na comunidade</small></div><span className="online-count">{onlineUsers.length}</span></div>{onlineUsers.length ? <div className="online-list">{onlineUsers.map(person => <div className="online-person" key={person.user_id}><span className="online-avatar">{String(person.display_name || 'A').trim().charAt(0).toUpperCase()}</span><strong>{person.display_name || 'Aquarista'}</strong><i title="Online agora"/></div>)}</div> : <p className="online-empty">Ainda não há outros aquaristas conectados. Quando alguém entrar, aparecerá aqui.</p>}</div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div>{post.userId === user.id && <button type="button" className="danger-icon-button post-delete-button" onClick={() => deletePost(post)} aria-label="Excluir publicação" title="Excluir publicação"><Trash2 size={15}/></button>}<p>{post.text}</p><div className="post-actions">
                   <button type="button" className={post.likedByMe ? 'post-action liked' : 'post-action'} onClick={() => toggleLike(post.id)} disabled={!!likeBusy[post.id]}>
@@ -631,10 +643,10 @@ function Dashboard({ user, onSignOut }) {
 
       {mobileMenu && <button className="mobile-scrim" onClick={() => setMobileMenu(false)} aria-label="Fechar menu"/>}
 
-      {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' ? submitTask : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
+      {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' || modal === 'editTask' ? submitTask : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : modal === 'editTask' ? 'Editar tarefa' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
         {(modal === 'tank' || modal === 'editTank') && <><Field label="Nome do aquário *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Aquário da sala"/><div className="form-two"><Field label="Volume" value={form.volume || ''} onChange={v=>setForm({...form,volume:v})} placeholder="Ex.: 100 L"/><Field label="Temperatura" value={form.temperature || ''} onChange={v=>setForm({...form,temperature:v})} placeholder="Ex.: 26 °C"/></div><Field label="pH atual" value={form.ph || ''} onChange={v=>setForm({...form,ph:v})} placeholder="Ex.: 7,0"/><label className="field"><span>Situação do aquário</span><select value={form.status || 'Novo'} onChange={e=>setForm({...form,status:e.target.value})}><option value="Novo">Ainda não avaliado</option><option value="Estável">Estável</option><option value="Atenção">Precisa de atenção</option></select></label></>}
         {(modal === 'fish' || modal === 'editFish') && <><Field label="Nome / variedade *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Guppy Full Red"/><Field label="Espécie" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Poecilia reticulata"/><div className="form-two"><label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(t=><option key={t.id} value={t.id}>{t.name} ({t.volume})</option>)}</select></label><Field label="Quantidade" value={form.count ?? '0'} onChange={v=>setForm({...form,count:v})} placeholder="0" type="number"/></div></>}
-        {modal === 'task' && <><Field label="Nome da tarefa *" value={form.title || ''} onChange={v=>setForm({...form,title:v})} placeholder="Ex.: Alimentar os peixes"/><Field label="Detalhes" value={form.detail || ''} onChange={v=>setForm({...form,detail:v})} placeholder="Ex.: Pela manhã, pequena quantidade"/></>}
+        {(modal === 'task' || modal === 'editTask') && <><Field label="Nome da tarefa *" value={form.title || ''} onChange={v=>setForm({...form,title:v})} placeholder="Ex.: Alimentar os peixes"/><Field label="Detalhes" value={form.detail || ''} onChange={v=>setForm({...form,detail:v})} placeholder="Ex.: Pela manhã, pequena quantidade"/><Field label="Data e hora do prazo (opcional)" value={form.dueDate || ''} onChange={v=>setForm({...form,dueDate:v})} type="datetime-local"/><p className="field-hint">Se não houver prazo, deixe em branco. O horário será salvo conforme o fuso do seu aparelho.</p></>}
         {modal === 'post' && <Field label="O que você gostaria de compartilhar?" value={form.text || ''} onChange={v=>setForm({...form,text:v})} placeholder="Conte uma experiência ou faça uma pergunta..." area/>}
         <div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>setModal('')}>Cancelar</button><button type="submit" className="primary-button"><Plus size={17}/> Salvar</button></div>
       </form></div>}
