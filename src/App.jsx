@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Auth from './Auth.jsx';
 import { supabase } from './lib/supabase.js';
 import {
-  Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Droplets,
+  Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Download, Droplets,
   Fish, Heart, HeartPulse, Home, Menu, MessageCircle, Pencil, Plus, Search, Settings,
   Sparkles, Thermometer, Waves, X
 } from 'lucide-react';
