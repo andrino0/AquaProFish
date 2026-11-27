@@ -16,7 +16,7 @@ const initialPosts = [];
 const speciesGuide = [
   {
     name: 'Guppy', latin: 'Poecilia reticulata',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Guppy_red_male.jpg?width=1000', photoCredit: 'Lauren · CC BY-SA 4.0 · Wikimedia Commons',
+    image: 'https://raw.githubusercontent.com/andrino0/AquaProFish/main/public/guppy-g2-ai-small.jpg', photoCredit: 'Imagem ilustrativa criada para o AquaProFish',
     summary: 'Pequeno vivíparo, ativo e famoso pela variedade de cores e caudas.',
     origin: 'América do Sul e Caribe; ocorre naturalmente em diferentes ambientes de água doce.',
     size: 'Machos geralmente 2–3 cm; fêmeas podem chegar a cerca de 5–6 cm.',
@@ -31,7 +31,7 @@ const speciesGuide = [
   },
   {
     name: 'Betta', latin: 'Betta splendens',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/%2Bm04-122_Queen_Rose_Royal_Lavender.jpg?width=1000', photoCredit: 'Pariskanza · CC BY-SA 4.0 · Wikimedia Commons',
+    image: 'https://raw.githubusercontent.com/andrino0/AquaProFish/main/public/betta-b3-ai-small.jpg', photoCredit: 'Imagem ilustrativa criada para o AquaProFish',
     summary: 'Peixe labirintídeo conhecido pelas cores, nadadeiras e comportamento territorial.',
     origin: 'Sudeste Asiático, especialmente Tailândia e regiões próximas; habita águas rasas e lentas.',
     size: 'Em geral 5–7 cm, sem contar variações de nadadeiras.',
