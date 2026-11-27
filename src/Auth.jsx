@@ -63,7 +63,6 @@ export default function Auth() {
 
   return <main className="auth-screen">
     <section className="auth-card">
-      <div className="auth-brand"><img src="/AquaProFish/aquaprofish-logo.svg" alt="AquaProFish — Gestão, Criação e Comunidade" /></div>
       <div className="auth-heading"><span className="eyebrow">SEU MUNDO AQUÁTICO</span><h1>{mode === 'signup' ? 'Crie sua conta' : 'Bem-vindo de volta'}</h1><p>{mode === 'signup' ? 'Cadastre-se gratuitamente para começar.' : 'Entre para acessar seus aquários e sua comunidade.'}</p></div>
       <form onSubmit={submit} className="auth-form">
         {mode === 'signup' && <label className="field"><span>Como devemos te chamar?</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="Seu nome" required maxLength={80}/></label>}
