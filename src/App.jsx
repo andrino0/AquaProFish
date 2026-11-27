@@ -34,13 +34,14 @@ function Dashboard({ user, onSignOut }) {
     let active = true;
     async function loadWorkspace() {
       setDataLoading(true);
-      const [tankResult, fishResult, taskResult, postResult] = await Promise.all([
+      const [tankResult, fishResult, taskResult, postResult, profileResult] = await Promise.all([
         supabase.from('aquariums').select('*').order('created_at', { ascending: false }),
         supabase.from('fish').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
-        supabase.from('posts').select('*, profiles(display_name)').order('created_at', { ascending: false })
+        supabase.from('posts').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id,display_name')
       ]);
-      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error;
+      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error;
       if (failure) {
         console.error('Erro ao carregar dados do AquaProFish:', failure);
         if (active) setSaveError('Não foi possível carregar todos os dados. Verifique sua conexão e tente atualizar.');
@@ -60,8 +61,9 @@ function Dashboard({ user, onSignOut }) {
           count: f.quantity || 1
         })));
         setTasks((taskResult.data || []).map(t => ({ id: t.id, title: t.title, detail: t.detail || '', done: t.completed })));
+        const profiles = profileResult.data || [];
         setPosts((postResult.data || []).map(p => ({
-          id: p.id, author: p.profiles?.display_name || 'Aquarista',
+          id: p.id, author: profiles.find(profile => profile.id === p.user_id)?.display_name || 'Aquarista',
           time: new Date(p.created_at).toLocaleString('pt-BR'), text: p.content, likes: p.likes || 0,
           tag: 'Comunidade'
         })));
