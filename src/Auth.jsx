@@ -64,7 +64,7 @@ export default function Auth() {
   return <main className="auth-screen">
     <section className="auth-card">
       <div className="auth-brand">
-        <img className="auth-logo" src={`${import.meta.env.BASE_URL}aquaprofish-logo.svg`} alt="AquaProFish" style={{width:62,height:62,objectFit:'contain',flex:'0 0 62px'}} />
+        <img className="auth-logo" src={`${import.meta.env.BASE_URL}aquaprofish-logo.png`} alt="AquaProFish" style={{width:62,height:62,objectFit:'contain',flex:'0 0 62px'}} />
         <div><strong>AquaPro<span>Fish</span></strong><small>GESTÃO • CRIAÇÃO • COMUNIDADE</small></div>
       </div>
       <div className="auth-heading"><span className="eyebrow">SEU MUNDO AQUÁTICO</span><h1>{mode === 'signup' ? 'Crie sua conta' : 'Bem-vindo de volta'}</h1><p>{mode === 'signup' ? 'Cadastre-se gratuitamente para começar.' : 'Entre para acessar seus aquários e sua comunidade.'}</p></div>
