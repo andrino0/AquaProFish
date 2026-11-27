@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Auth from './Auth.jsx';
+import { supabase } from './lib/supabase.js';
 import {
   Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Droplets,
   Fish, HeartPulse, Home, Menu, MessageCircle, Plus, Search, Settings,
@@ -38,7 +40,7 @@ function readStore(key, fallback) {
   }
 }
 
-function App() {
+function Dashboard({ user, onSignOut }) {
   const [section, setSection] = useState('Início');
   const [tanks, setTanks] = useState(() => readStore('apf-tanks', initialTanks));
   const [fishList, setFishList] = useState(() => readStore('apf-fish', initialFish));
@@ -122,7 +124,7 @@ function App() {
         <header className="topbar">
           <button className="menu-toggle" onClick={() => setMobileMenu(true)} aria-label="Abrir menu"><Menu/></button>
           <div className="breadcrumb">AquaProFish <ChevronRight size={14}/> <strong>{section}</strong></div>
-          <div className="top-actions"><span className="status-pill"><i/> Ambiente de demonstração</span><button className="icon-button" aria-label="Notificações"><Bell size={19}/></button><div className="avatar small">A</div></div>
+          <div className="top-actions"><span className="user-email">{user?.email}</span><button className="auth-logout" onClick={onSignOut}>Sair</button><span className="status-pill"><i/> Ambiente de demonstração</span><button className="icon-button" aria-label="Notificações"><Bell size={19}/></button><div className="avatar small">A</div></div>
         </header>
 
         <div className="content">
@@ -184,4 +186,22 @@ function Field({ label, value, onChange, placeholder, type='text', area=false })
 }
 function Empty({ title, text }) { return <div className="empty-state"><Fish size={28}/><strong>{title}</strong><span>{text}</span></div>; }
 
+function App() {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setLoading(false);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+  if (loading) return <main className="auth-screen"><p className="auth-loading">Carregando AquaProFish...</p></main>;
+  if (!session) return <Auth />;
+  return <Dashboard user={session.user} onSignOut={() => supabase.auth.signOut()} />;
+}
 export default App;
