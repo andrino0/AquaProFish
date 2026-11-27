@@ -51,3 +51,6 @@
 .brand-copy strong{font:800 21px Outfit,sans-serif;letter-spacing:-.6px;display:block;color:#fff;white-space:nowrap}
 .brand-copy strong span{color:#40c9e4}
 .brand-copy small{display:block;font-size:7px;letter-spacing:1.1px;color:#84a5ba;margin-top:3px;line-height:1.4}
+
+.footer-download{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 15px;border:1px solid #248ca8;border-radius:8px;background:linear-gradient(110deg,#087f9f,#10516c);color:#effcff;text-decoration:none;font-size:11px;font-weight:800;box-shadow:0 4px 14px #00608030}
+.footer-download:hover{filter:brightness(1.15)}
