@@ -27,6 +27,21 @@ jobs:
         run: npm install
       - name: Build web app for Android
         run: npm run build:android
+      - name: Prepare official AquaProFish icon and splash
+        run: |
+          npm install --no-save sharp @capacitor/assets
+          mkdir -p assets
+          node --input-type=module <<'NODE'
+          import sharp from 'sharp';
+          const logo = Buffer.from(await (await import('node:fs/promises')).readFile('public/aquaprofish-logo.svg'));
+          await sharp({ create: { width: 1024, height: 1024, channels: 4, background: '#071a2b' } })
+            .composite([{ input: await sharp(logo).resize(820, 692, { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
+            .png().toFile('assets/icon-only.png');
+          await sharp({ create: { width: 2732, height: 2732, channels: 4, background: '#071a2b' } })
+            .composite([{ input: await sharp(logo).resize(1900, 1603, { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
+            .png().toFile('assets/splash.png');
+          NODE
+          npx capacitor-assets generate --android
       - name: Add Android platform
         run: npx cap add android
       - name: Sync Android project
