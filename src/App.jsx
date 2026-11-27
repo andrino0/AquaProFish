@@ -14,7 +14,9 @@ const initialTasks = [];
 const initialPosts = [];
 
 function nextRecurringDate(value, recurrence) {
-  const date = value ? new Date(value) : new Date();
+  const now = new Date();
+  const scheduled = value ? new Date(value) : now;
+  const date = scheduled > now ? scheduled : now;
   if (recurrence === 'daily') date.setDate(date.getDate() + 1);
   else if (recurrence === 'weekly') date.setDate(date.getDate() + 7);
   else if (recurrence === 'monthly') {
