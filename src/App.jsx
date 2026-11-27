@@ -5,7 +5,7 @@ import { supabase } from './lib/supabase.js';
 import {
   Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Download, Droplets,
   Fish, Heart, HeartPulse, Home, Menu, MessageCircle, Pencil, Plus, Search, Settings,
-  Sparkles, Thermometer, Waves, X
+  Sparkles, Thermometer, Waves, X, Copy
 } from 'lucide-react';
 
 const initialTanks = [];
@@ -36,6 +36,7 @@ function Dashboard({ user, onSignOut }) {
   const [commentDrafts, setCommentDrafts] = useState({});
   const [expandedComments, setExpandedComments] = useState({});
   const [likeBusy, setLikeBusy] = useState({});
+  const [pixCopied, setPixCopied] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -140,7 +141,8 @@ function Dashboard({ user, onSignOut }) {
     { label: 'Meus peixes', icon: Fish },
     { label: 'Rotina', icon: CalendarDays },
     { label: 'Comunidade', icon: MessageCircle },
-    { label: 'Guia de espécies', icon: BookOpen }
+    { label: 'Guia de espécies', icon: BookOpen },
+    { label: 'Apoie o AquaProFish', icon: Heart }
   ];
 
   const openModal = (type) => { setForm({}); setModal(type); };
@@ -268,6 +270,34 @@ function Dashboard({ user, onSignOut }) {
     setExpandedComments(current => ({ ...current, [postId]: true }));
   }
 
+  async function copyPixKey() {
+    const key = '+5553991086944';
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(key);
+        copied = true;
+      }
+    } catch { copied = false; }
+    if (!copied) {
+      try {
+        const area = document.createElement('textarea');
+        area.value = key;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.left = '-9999px';
+        document.body.appendChild(area);
+        area.focus();
+        area.select();
+        area.setSelectionRange(0, area.value.length);
+        copied = document.execCommand('copy');
+        area.remove();
+      } catch { copied = false; }
+    }
+    setPixCopied(copied);
+    if (!copied) window.prompt('Copie a chave Pix abaixo:', key);
+  }
+
   async function toggleTask(id) {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -366,6 +396,22 @@ function Dashboard({ user, onSignOut }) {
                     <button type="submit" className="comment-send" disabled={!String(commentDrafts[post.id] || '').trim()}>Enviar</button>
                   </form>
                 </div>}</article>)}</div><p className="note">As publicações, curtidas e comentários ficam salvos no banco de dados da comunidade.</p></section>}
+
+          {section === 'Apoie o AquaProFish' && <section className="support-layout">
+            <article className="support-card">
+              <div className="support-heart"><Heart size={27} fill="currentColor"/></div>
+              <span className="eyebrow">APOIO VOLUNTÁRIO</span>
+              <h2>Ajude o AquaProFish a crescer!</h2>
+              <p>O AquaProFish é gratuito. Se este aplicativo ajuda você a cuidar melhor dos seus peixes e aquários, poderá apoiar o projeto com uma contribuição voluntária de qualquer valor.</p>
+              <div className="pix-key-panel">
+                <span>CHAVE PIX — CELULAR</span>
+                <strong>+55 53 99108-6944</strong>
+              </div>
+              <button type="button" className="pix-copy-button" onClick={copyPixKey}><Copy size={17}/>{pixCopied ? 'Chave Pix copiada!' : 'Copiar chave Pix'}</button>
+              <p className="support-notice">A contribuição é totalmente opcional. Todas as funcionalidades permanecem gratuitas, independentemente de qualquer contribuição. Antes de confirmar, confira no aplicativo do seu banco o nome do destinatário.</p>
+            </article>
+            <p className="support-thanks">Obrigado por apoiar o desenvolvimento do AquaProFish! <Heart size={14} fill="currentColor"/></p>
+          </section>}
 
           {section === 'Guia de espécies' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Conheça as espécies</h3><p>Uma base inicial para organizar seu conhecimento</p></div><span className="tag info">Em expansão</span></div><div className="species-grid">{[['Guppy','Poecilia reticulata','Peixe vivíparo, ativo e muito apreciado pela variedade de cores.'],['Betta','Betta splendens','Peixe de personalidade marcante. Machos geralmente devem ser mantidos separados.'],['Platy','Xiphophorus maculatus','Vivíparo resistente e sociável, com muitas variedades.'],['Espada','Xiphophorus hellerii','Vivíparo conhecido pela extensão da nadadeira caudal dos machos.'],['Molinésia','Poecilia sphenops','Peixe vivíparo que aprecia água estável e alimentação variada.']].map(([name,latin,desc])=><article className="species-card" key={name}><div className="species-illustration"><Fish size={32}/></div><div><h3>{name}</h3><i>{latin}</i><p>{desc}</p></div></article>)}</div></section>}
         </div>
