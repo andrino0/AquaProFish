@@ -23,20 +23,61 @@ function readStore(key, fallback) {
 
 function Dashboard({ user, onSignOut }) {
   const [section, setSection] = useState('Início');
-  const storagePrefix = `apf-user-${user?.id || 'guest'}-`;
-  const [tanks, setTanks] = useState(() => readStore(`${storagePrefix}tanks`, initialTanks));
-  const [fishList, setFishList] = useState(() => readStore(`${storagePrefix}fish`, initialFish));
-  const [tasks, setTasks] = useState(() => readStore(`${storagePrefix}tasks`, initialTasks));
-  const [posts, setPosts] = useState(() => readStore(`${storagePrefix}posts`, initialPosts));
+  const [tanks, setTanks] = useState(initialTanks);
+  const [fishList, setFishList] = useState(initialFish);
+  const [tasks, setTasks] = useState(initialTasks);
+  const [posts, setPosts] = useState(initialPosts);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    async function loadWorkspace() {
+      setDataLoading(true);
+      const [tankResult, fishResult, taskResult, postResult] = await Promise.all([
+        supabase.from('aquariums').select('*').order('created_at', { ascending: false }),
+        supabase.from('fish').select('*').order('created_at', { ascending: false }),
+        supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+        supabase.from('posts').select('*, profiles(display_name)').order('created_at', { ascending: false })
+      ]);
+      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error;
+      if (failure) {
+        console.error('Erro ao carregar dados do AquaProFish:', failure);
+        if (active) setSaveError('Não foi possível carregar todos os dados. Verifique sua conexão e tente atualizar.');
+      } else if (active) {
+        const dbTanks = tankResult.data || [];
+        const dbFish = fishResult.data || [];
+        setTanks(dbTanks.map(t => ({
+          id: t.id, name: t.name,
+          volume: t.volume_label || (t.volume_liters ? `${t.volume_liters} L` : 'Não informado'),
+          temperature: t.temperature || '—', ph: t.ph || '—',
+          fish: dbFish.filter(f => f.aquarium_id === t.id).reduce((n, f) => n + Number(f.quantity || 0), 0),
+          status: t.status || 'Novo'
+        })));
+        setFishList(dbFish.map(f => ({
+          id: f.id, name: f.name, species: f.species || 'Espécie não informada',
+          tank: dbTanks.find(t => t.id === f.aquarium_id)?.name || 'Sem aquário',
+          count: f.quantity || 1
+        })));
+        setTasks((taskResult.data || []).map(t => ({ id: t.id, title: t.title, detail: t.detail || '', done: t.completed })));
+        setPosts((postResult.data || []).map(p => ({
+          id: p.id, author: p.profiles?.display_name || 'Aquarista',
+          time: new Date(p.created_at).toLocaleString('pt-BR'), text: p.content, likes: p.likes || 0,
+          tag: 'Comunidade'
+        })));
+        setSaveError('');
+      }
+      if (active) setDataLoading(false);
+    }
+    loadWorkspace();
+    return () => { active = false; };
+  }, [user?.id]);
   const [query, setQuery] = useState('');
   const [modal, setModal] = useState('');
   const [form, setForm] = useState({});
   const [mobileMenu, setMobileMenu] = useState(false);
 
-  const save = (key, value, setter) => {
-    setter(value);
-    localStorage.setItem(storagePrefix + key, JSON.stringify(value));
-  };
+  const save = (value, setter) => setter(value);
 
   const totalFish = useMemo(() => fishList.reduce((sum, item) => sum + Number(item.count || 0), 0), [fishList]);
   const navItems = [
@@ -51,29 +92,55 @@ function Dashboard({ user, onSignOut }) {
   const openModal = (type) => { setForm({}); setModal(type); };
   const filteredFish = fishList.filter(f => (f.name + ' ' + f.species + ' ' + f.tank).toLowerCase().includes(query.toLowerCase()));
 
-  function submitTank(e) {
+  async function submitTank(e) {
     e.preventDefault();
     if (!form.name?.trim()) return;
-    const next = [...tanks, { id: Date.now(), name: form.name, volume: form.volume || 'Não informado', temperature: form.temperature || '—', ph: form.ph || '—', fish: 0, status: 'Novo' }];
-    save('tanks', next, setTanks); setModal('');
+    setSaveError('');
+    const volumeNumber = Number(String(form.volume || '').replace(',', '.').match(/[0-9]+(?:\.[0-9]+)?/)?.[0] || 0);
+    const { data, error } = await supabase.from('aquariums').insert({
+      user_id: user.id, name: form.name.trim(), volume_liters: volumeNumber || null,
+      volume_label: form.volume || null, temperature: form.temperature || null, ph: form.ph || null, status: 'Novo'
+    }).select().single();
+    if (error) { setSaveError('Não foi possível salvar o aquário: ' + error.message); return; }
+    setTanks([...tanks, { id: data.id, name: data.name, volume: data.volume_label || (data.volume_liters ? `${data.volume_liters} L` : 'Não informado'), temperature: data.temperature || '—', ph: data.ph || '—', fish: 0, status: data.status }]);
+    setModal('');
   }
 
-  function submitFish(e) {
+  async function submitFish(e) {
     e.preventDefault();
     if (!form.name?.trim()) return;
-    const next = [...fishList, { id: Date.now(), name: form.name, species: form.species || 'Espécie não informada', tank: form.tank || 'Sem aquário', count: Math.max(1, Number(form.count || 1)) }];
-    save('fish', next, setFishList); setModal('');
+    setSaveError('');
+    const selectedTank = tanks.find(t => t.name.toLowerCase() === String(form.tank || '').trim().toLowerCase());
+    const quantity = Math.max(1, Number(form.count || 1));
+    const { data, error } = await supabase.from('fish').insert({
+      user_id: user.id, aquarium_id: selectedTank?.id || null, name: form.name.trim(),
+      species: form.species || null, quantity
+    }).select().single();
+    if (error) { setSaveError('Não foi possível salvar o peixe: ' + error.message); return; }
+    setFishList([{ id: data.id, name: data.name, species: data.species || 'Espécie não informada', tank: selectedTank?.name || 'Sem aquário', count: data.quantity }, ...fishList]);
+    if (selectedTank) setTanks(tanks.map(t => t.id === selectedTank.id ? { ...t, fish: t.fish + quantity } : t));
+    setModal('');
   }
 
-  function submitPost(e) {
+  async function submitPost(e) {
     e.preventDefault();
     if (!form.text?.trim()) return;
-    const next = [{ id: Date.now(), author: 'Você', time: 'Agora', text: form.text, likes: 0, tag: 'Minha publicação' }, ...posts];
-    save('posts', next, setPosts); setModal('');
+    setSaveError('');
+    const { data, error } = await supabase.from('posts').insert({
+      user_id: user.id, content: form.text.trim()
+    }).select().single();
+    if (error) { setSaveError('Não foi possível publicar: ' + error.message); return; }
+    setPosts([{ id: data.id, author: user.user_metadata?.display_name || user.email || 'Você', time: 'Agora', text: data.content, likes: 0, tag: 'Comunidade' }, ...posts]);
+    setModal('');
   }
 
-  function toggleTask(id) {
-    save('tasks', tasks.map(t => t.id === id ? { ...t, done: !t.done } : t), setTasks);
+  async function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const completed = !task.done;
+    const { error } = await supabase.from('tasks').update({ completed }).eq('id', id);
+    if (error) { setSaveError('Não foi possível atualizar a tarefa: ' + error.message); return; }
+    save(tasks.map(t => t.id === id ? { ...t, done: completed } : t), setTasks);
   }
 
   const title = section === 'Início' ? 'Seu mundo aquático em um só lugar' : section;
@@ -105,10 +172,12 @@ function Dashboard({ user, onSignOut }) {
         <header className="topbar">
           <button className="menu-toggle" onClick={() => setMobileMenu(true)} aria-label="Abrir menu"><Menu/></button>
           <div className="breadcrumb">AquaProFish <ChevronRight size={14}/> <strong>{section}</strong></div>
-          <div className="top-actions"><span className="user-email">{user?.email}</span><button className="auth-logout" onClick={onSignOut}>Sair</button><span className="status-pill"><i/> Ambiente de demonstração</span><button className="icon-button" aria-label="Notificações"><Bell size={19}/></button><div className="avatar small">A</div></div>
+          <div className="top-actions"><span className="user-email">{user?.email}</span><button className="auth-logout" onClick={onSignOut}>Sair</button><span className="status-pill"><i/> Conta conectada</span><button className="icon-button" aria-label="Notificações"><Bell size={19}/></button><div className="avatar small">A</div></div>
         </header>
 
         <div className="content">
+          {saveError && <div className="note" role="alert">{saveError}</div>}
+          {dataLoading && <p className="note">Carregando seus dados salvos...</p>}
           <div className="page-heading"><div><div className="eyebrow">AQUAPROFISH</div><h1>{title}</h1><p>{subtitle}</p></div>
             {section === 'Aquários' && <button className="primary-button" onClick={() => openModal('tank')}><Plus size={18}/> Novo aquário</button>}
             {section === 'Meus peixes' && <button className="primary-button" onClick={() => openModal('fish')}><Plus size={18}/> Cadastrar peixe</button>}
@@ -140,7 +209,7 @@ function Dashboard({ user, onSignOut }) {
 
           {section === 'Rotina' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Rotina de cuidados</h3><p>Marque as atividades conforme forem concluídas</p></div><span className="count-label">{tasks.filter(t=>t.done).length} de {tasks.length} concluídas</span></div><div className="progress-track"><div style={{width: (tasks.length ? tasks.filter(t=>t.done).length/tasks.length*100 : 0) + '%'}}/></div><div className="routine-list">{tasks.map(t => <label className={`task-row routine-task ${t.done ? 'task-done' : ''}`} key={t.id}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}</small></span><span className={t.done ? 'tag success' : 'tag warning'}>{t.done ? 'Concluída' : 'Pendente'}</span></label>)}</div><p className="note">Nesta primeira versão, as tarefas são salvas neste dispositivo. Lembretes automáticos serão adicionados na próxima etapa.</p></section>}
 
-          {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Em breve: fotos dos aquários, publicações, comentários e conversas entre aquaristas.</p></div></div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div><p>{post.text}</p><div className="post-actions"><span><HeartPulse size={16}/> {post.likes} curtidas</span><span><MessageCircle size={16}/> Comentários em breve</span></div></article>)}</div><p className="note">Demonstração local: as publicações ficam salvas apenas neste navegador. Para uma comunidade real, vamos conectar banco de dados, contas e armazenamento de fotos.</p></section>}
+          {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Em breve: fotos dos aquários, publicações, comentários e conversas entre aquaristas.</p></div></div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div><p>{post.text}</p><div className="post-actions"><span><HeartPulse size={16}/> {post.likes} curtidas</span><span><MessageCircle size={16}/> Comentários em breve</span></div></article>)}</div><p className="note">As publicações são salvas na sua conta. Fotos e comentários serão adicionados na próxima etapa.</p></section>}
 
           {section === 'Guia de espécies' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Conheça as espécies</h3><p>Uma base inicial para organizar seu conhecimento</p></div><span className="tag info">Em expansão</span></div><div className="species-grid">{[['Guppy','Poecilia reticulata','Peixe vivíparo, ativo e muito apreciado pela variedade de cores.'],['Betta','Betta splendens','Peixe de personalidade marcante. Machos geralmente devem ser mantidos separados.'],['Platy','Xiphophorus maculatus','Vivíparo resistente e sociável, com muitas variedades.'],['Espada','Xiphophorus hellerii','Vivíparo conhecido pela extensão da nadadeira caudal dos machos.'],['Molinésia','Poecilia sphenops','Peixe vivíparo que aprecia água estável e alimentação variada.']].map(([name,latin,desc])=><article className="species-card" key={name}><div className="species-illustration"><Fish size={32}/></div><div><h3>{name}</h3><i>{latin}</i><p>{desc}</p></div></article>)}</div></section>}
         </div>
