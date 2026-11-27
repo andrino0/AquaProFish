@@ -13,6 +13,84 @@ const initialFish = [];
 const initialTasks = [];
 const initialPosts = [];
 
+const speciesGuide = [
+  {
+    name: 'Guppy', latin: 'Poecilia reticulata',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Poecilia_reticulata_male.jpg',
+    summary: 'Pequeno vivíparo, ativo e famoso pela variedade de cores e caudas.',
+    origin: 'América do Sul e Caribe; ocorre naturalmente em diferentes ambientes de água doce.',
+    size: 'Machos geralmente 2–3 cm; fêmeas podem chegar a cerca de 5–6 cm.',
+    temperature: '22–28 °C', ph: '6,8–7,8', hardness: 'Moderadamente dura a dura',
+    aquarium: 'A partir de 40 L para um pequeno grupo, com filtragem e manutenção estáveis.',
+    food: 'Onívoro: ração de boa qualidade, complementada com alimento congelado ou vivo apropriado e vegetais.',
+    behavior: 'Pacífico e bastante ativo. Manter mais fêmeas que machos ajuda a reduzir o assédio constante às fêmeas.',
+    compatibility: 'Convive com espécies pequenas e pacíficas de parâmetros semelhantes. Evite peixes grandes ou que mordam nadadeiras.',
+    reproduction: 'É vivíparo: a fêmea libera filhotes já formados. Reproduz-se com facilidade e pode superpovoar o aquário.',
+    facts: 'As cores e formatos das caudas foram selecionados por criadores ao longo de muitas gerações. Populações selvagens costumam ter aparência mais discreta.',
+    care: 'Evite superlotação e mudanças bruscas de água. Quarentene novos peixes e mantenha a proporção entre machos e fêmeas.'
+  },
+  {
+    name: 'Betta', latin: 'Betta splendens',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Betta_splendens_male.jpg',
+    summary: 'Peixe labirintídeo conhecido pelas cores, nadadeiras e comportamento territorial.',
+    origin: 'Sudeste Asiático, especialmente Tailândia e regiões próximas; habita águas rasas e lentas.',
+    size: 'Em geral 5–7 cm, sem contar variações de nadadeiras.',
+    temperature: '25–28 °C', ph: '6,5–7,5', hardness: 'Baixa a moderada',
+    aquarium: 'Prefira aquário de pelo menos 20 L para um exemplar, aquecido, filtrado suavemente e com acesso fácil à superfície.',
+    food: 'Predominantemente carnívoro: ração específica de qualidade e pequenas porções de alimentos apropriados ricos em proteína.',
+    behavior: 'Machos são territoriais e não devem ser mantidos juntos. Fêmeas também podem apresentar agressividade; convivência exige experiência e espaço.',
+    compatibility: 'A opção mais segura é mantê-lo sozinho. Companheiros só devem ser considerados em aquário adequado, com espécies tranquilas e monitoramento.',
+    reproduction: 'O macho constrói ninho de bolhas; a reprodução exige preparação, aquário próprio e manejo dos filhotes.',
+    facts: 'Possui órgão labirinto, que permite respirar ar atmosférico na superfície. Isso não substitui água limpa e aquário bem cuidado.',
+    care: 'Não use potes minúsculos. Evite correnteza forte, temperaturas baixas e decoração pontiaguda que possa rasgar as nadadeiras.'
+  },
+  {
+    name: 'Platy', latin: 'Xiphophorus maculatus',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_maculatus.jpg',
+    summary: 'Vivíparo sociável, resistente e disponível em muitas cores.',
+    origin: 'América Central, em águas doces e ambientes de correnteza fraca.',
+    size: 'Cerca de 4–6 cm.',
+    temperature: '22–26 °C', ph: '7,0–8,2', hardness: 'Moderada a dura',
+    aquarium: 'A partir de 60 L para um grupo pequeno, com plantas e espaço para natação.',
+    food: 'Onívoro: ração variada, alimentos vegetais e pequenas porções de alimentos congelados apropriados.',
+    behavior: 'Geralmente pacífico e ativo. Prefira grupos com mais fêmeas que machos para reduzir perseguições.',
+    compatibility: 'Pode conviver com outros peixes pacíficos que apreciem água semelhante. Evite predadores e espécies agressivas.',
+    reproduction: 'Vivíparo e prolífico. Filhotes podem aparecer regularmente quando há machos e fêmeas no mesmo aquário.',
+    facts: 'Há muitas linhagens ornamentais, com padrões e cores bastante diferentes da forma selvagem.',
+    care: 'Acompanhe a dureza da água, evite superlotação e planeje o destino dos filhotes para não sobrecarregar o aquário.'
+  },
+  {
+    name: 'Espada', latin: 'Xiphophorus hellerii',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_hellerii_male.jpg',
+    summary: 'Vivíparo ativo; o macho costuma apresentar uma extensão em forma de espada na cauda.',
+    origin: 'México e América Central, em rios e águas doces variadas.',
+    size: 'Geralmente 8–12 cm; machos podem parecer maiores por causa da extensão caudal.',
+    temperature: '22–28 °C', ph: '7,0–8,0', hardness: 'Moderada a dura',
+    aquarium: 'A partir de 80 L para um grupo, pois são nadadores ativos e precisam de comprimento para nadar.',
+    food: 'Onívoro: ração de qualidade, vegetais e complementos congelados ou vivos apropriados.',
+    behavior: 'Ativo; machos podem disputar território e perseguir fêmeas. Mantenha mais fêmeas que machos.',
+    compatibility: 'Prefira peixes pacíficos de porte e parâmetros compatíveis. Evite espécies muito pequenas ou lentas se houver perseguição.',
+    reproduction: 'Vivíparo; fêmeas podem armazenar esperma e produzir várias ninhadas após uma única fecundação.',
+    facts: 'A famosa “espada” é uma extensão dos raios inferiores da nadadeira caudal dos machos.',
+    care: 'Ofereça espaço para natação, tampa segura e água estável. Considere o tamanho adulto antes de escolher o aquário.'
+  },
+  {
+    name: 'Molinésia', latin: 'Poecilia sphenops',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Poecilia_sphenops.jpg',
+    summary: 'Vivíparo robusto, com grande variedade de formas e cores.',
+    origin: 'México e América Central; algumas populações vivem em águas com diferentes níveis de salinidade.',
+    size: 'Em geral 6–10 cm, dependendo da variedade e da linhagem.',
+    temperature: '24–28 °C', ph: '7,0–8,2', hardness: 'Moderada a dura',
+    aquarium: 'A partir de 80 L para um grupo pequeno; variedades maiores podem precisar de mais espaço.',
+    food: 'Onívora com forte componente vegetal: ração variada, spirulina e vegetais apropriados.',
+    behavior: 'Geralmente pacífica e ativa. Mais fêmeas que machos ajuda a diminuir o estresse por perseguição.',
+    compatibility: 'Escolha companheiros pacíficos que aceitem água mais mineralizada e alcalina. Não misture espécies incompatíveis só por aparência.',
+    reproduction: 'Vivípara e pode reproduzir-se com frequência em aquários comunitários.',
+    facts: 'Nem toda molinésia tem as mesmas exigências: variedades como a molinésia-sailfin podem crescer mais e demandar aquários maiores.',
+    care: 'É especialmente importante manter água limpa, estável e com mineralização adequada. Não adicione sal automaticamente: avalie as necessidades dos habitantes.'
+  }
+];
+
 function nextRecurringDate(value, recurrence) {
   const now = new Date();
   const scheduled = value ? new Date(value) : now;
@@ -162,6 +240,7 @@ function Dashboard({ user, onSignOut }) {
     return () => { active = false; };
   }, [user?.id]);
   const [query, setQuery] = useState('');
+  const [selectedSpecies, setSelectedSpecies] = useState(null);
   const [modal, setModal] = useState('');
   const [form, setForm] = useState({});
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -679,13 +758,15 @@ function Dashboard({ user, onSignOut }) {
             <p className="support-thanks">Obrigado por apoiar o desenvolvimento do AquaProFish! <Heart size={14} fill="currentColor"/></p>
           </section>}
 
-          {section === 'Guia de espécies' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Conheça as espécies</h3><p>Uma base inicial para organizar seu conhecimento</p></div><span className="tag info">Em expansão</span></div><div className="species-grid">{[['Guppy','Poecilia reticulata','Peixe vivíparo, ativo e muito apreciado pela variedade de cores.'],['Betta','Betta splendens','Peixe de personalidade marcante. Machos geralmente devem ser mantidos separados.'],['Platy','Xiphophorus maculatus','Vivíparo resistente e sociável, com muitas variedades.'],['Espada','Xiphophorus hellerii','Vivíparo conhecido pela extensão da nadadeira caudal dos machos.'],['Molinésia','Poecilia sphenops','Peixe vivíparo que aprecia água estável e alimentação variada.']].map(([name,latin,desc])=><article className="species-card" key={name}><div className="species-illustration"><Fish size={32}/></div><div><h3>{name}</h3><i>{latin}</i><p>{desc}</p></div></article>)}</div></section>}
+          {section === 'Guia de espécies' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Conheça as espécies</h3><p>Toque em um peixe para abrir sua ficha completa</p></div><span className="tag info">5 espécies</span></div><div className="species-grid">{speciesGuide.map(species => <button type="button" className="species-card species-card-button" key={species.name} onClick={() => setSelectedSpecies(species)}><img className="species-thumb" src={species.image} alt={species.name} loading="lazy" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling.style.display = 'grid'; }}/><div className="species-illustration species-fallback"><Fish size={32}/></div><div className="species-card-copy"><h3>{species.name}</h3><i>{species.latin}</i><p>{species.summary}</p><span className="species-open">Ver ficha completa <ChevronRight size={14}/></span></div></button>)}</div></section>}
         </div>
         {!Capacitor.isNativePlatform() && <div className="footer-download-wrap"><a className="footer-download" href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk"><Download size={16}/> Baixe aqui o app</a></div>}
         <footer className="footer"><span className="footer-brand">AquaProFish · Gestão • Criação • Comunidade</span><span className="footer-developer">Desenvolvedor: <strong>Andrino Morales Botelho</strong></span><span>© 2026 AquaProFish. Todos os direitos reservados.</span></footer>
       </main>
 
       {mobileMenu && <button className="mobile-scrim" onClick={() => setMobileMenu(false)} aria-label="Fechar menu"/>}
+
+      {selectedSpecies && <div className="species-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectedSpecies(null); }}><section className="species-detail-modal" role="dialog" aria-modal="true" aria-labelledby="species-detail-title"><button type="button" className="species-detail-close" onClick={() => setSelectedSpecies(null)} aria-label="Fechar ficha"><X size={20}/></button><img className="species-detail-image" src={selectedSpecies.image} alt={selectedSpecies.name} onError={event => { event.currentTarget.style.display = 'none'; }}/><div className="species-detail-content"><span className="eyebrow">GUIA DE ESPÉCIES • AQUAPROFISH</span><h2 id="species-detail-title">{selectedSpecies.name}</h2><i className="species-detail-latin">{selectedSpecies.latin}</i><p className="species-detail-summary">{selectedSpecies.summary}</p><div className="species-facts-grid"><div><small>Temperatura</small><strong>{selectedSpecies.temperature}</strong></div><div><small>pH</small><strong>{selectedSpecies.ph}</strong></div><div><small>Dureza</small><strong>{selectedSpecies.hardness}</strong></div><div><small>Tamanho adulto</small><strong>{selectedSpecies.size}</strong></div></div><div className="species-detail-sections">{[['Origem',selectedSpecies.origin],['Aquário recomendado',selectedSpecies.aquarium],['Alimentação',selectedSpecies.food],['Comportamento',selectedSpecies.behavior],['Compatibilidade',selectedSpecies.compatibility],['Reprodução',selectedSpecies.reproduction],['Você sabia?',selectedSpecies.facts],['Cuidados importantes',selectedSpecies.care]].map(([heading,body]) => <article key={heading}><h3>{heading}</h3><p>{body}</p></article>)}</div><p className="species-disclaimer">Parâmetros e tamanhos são referências gerais. A necessidade real varia conforme linhagem, origem, idade, população e qualidade da água. Priorize estabilidade e pesquise a variedade específica.</p><button type="button" className="primary-button species-back-button" onClick={() => setSelectedSpecies(null)}>Voltar ao guia</button></div></section></div>}
 
       {confirmDialog && <div className="confirm-modal-backdrop" role="presentation"><section className="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message"><div className="confirm-modal-heading"><h2 id="confirm-title">Confirmar ação</h2></div><p id="confirm-message">{confirmDialog}</p><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => finishConfirmation(false)}>Cancelar</button><button type="button" className="danger-confirm-button" onClick={() => finishConfirmation(true)}>Confirmar</button></div></section></div>}
 
