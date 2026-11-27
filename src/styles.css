@@ -145,3 +145,10 @@
 .species-disclaimer{margin:16px 0;color:#7999ac;font-size:10px;line-height:1.6}
 .species-back-button{width:100%;justify-content:center}
 @media(max-width:560px){.species-thumb,.species-fallback{width:64px;height:64px;flex-basis:64px}.species-detail-image{height:170px}.species-detail-content{padding:17px}.species-facts-grid{grid-template-columns:1fr 1fr}.species-detail-sections{grid-template-columns:1fr}.species-detail-content h2{font-size:23px}}
+
+
+/* Isola a confirmação de exclusão no WebView Android: sem imagens ou fundos herdados */
+.confirm-modal-backdrop{background-color:rgba(2,11,19,.86)!important;background-image:none!important;isolation:isolate;overflow:auto}
+.confirm-modal{position:relative;display:block;max-width:min(420px,calc(100vw - 36px));width:100%;max-height:calc(100dvh - 36px);overflow:auto;background:#0b2030!important;background-image:none!important;object-fit:initial!important}
+.confirm-modal img,.confirm-modal picture,.confirm-modal video,.confirm-modal canvas{display:none!important;width:0!important;height:0!important;max-width:0!important;max-height:0!important;object-fit:none!important}
+.confirm-modal::before,.confirm-modal::after{content:none!important;display:none!important}
