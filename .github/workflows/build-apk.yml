@@ -44,6 +44,14 @@ jobs:
           fi
           echo "Android compile SDK configuration:"
           grep -R -n -E 'compileSdk(Version)?[[:space:]]*[= ]' android/variables.gradle android/app/build.gradle || true
+          if [ -f android/variables.gradle ]; then
+            sed -i -E 's/(minSdkVersion[[:space:]]*=[[:space:]]*)[0-9]+/\123/' android/variables.gradle
+          fi
+          if [ -f android/app/build.gradle ]; then
+            sed -i -E 's/(minSdk[[:space:]]+)[0-9]+/\123/' android/app/build.gradle
+          fi
+          echo "Android minimum SDK configuration:"
+          grep -R -n -E 'minSdk(Version)?[[:space:]]*[= ]' android/variables.gradle android/app/build.gradle || true
 
       - name: Prepare official AquaProFish icon and splash
         run: |
