@@ -16,7 +16,7 @@ const initialPosts = [];
 const speciesGuide = [
   {
     name: 'Guppy', latin: 'Poecilia reticulata',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Guppy_red_male.jpg?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Guppy_red_male.jpg?width=1000', photoCredit: 'Przemysław Malkowski · CC BY-SA 3.0 · Wikimedia Commons',
     summary: 'Pequeno vivíparo, ativo e famoso pela variedade de cores e caudas.',
     origin: 'América do Sul e Caribe; ocorre naturalmente em diferentes ambientes de água doce.',
     size: 'Machos geralmente 2–3 cm; fêmeas podem chegar a cerca de 5–6 cm.',
@@ -31,7 +31,7 @@ const speciesGuide = [
   },
   {
     name: 'Betta', latin: 'Betta splendens',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Betta_splendens_male_with_bubble_nest.jpg?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Betta_splendens_male_with_bubble_nest.jpg?width=1000', photoCredit: 'ErgoSum88 · domínio público · Wikimedia Commons',
     summary: 'Peixe labirintídeo conhecido pelas cores, nadadeiras e comportamento territorial.',
     origin: 'Sudeste Asiático, especialmente Tailândia e regiões próximas; habita águas rasas e lentas.',
     size: 'Em geral 5–7 cm, sem contar variações de nadadeiras.',
@@ -46,7 +46,7 @@ const speciesGuide = [
   },
   {
     name: 'Platy', latin: 'Xiphophorus maculatus',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Red_Wag_Platies.JPG?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Red_Wag_Platies.JPG?width=1000', photoCredit: 'Aaron Tran · CC BY-SA 2.5 · Wikimedia Commons',
     summary: 'Vivíparo sociável, resistente e disponível em muitas cores.',
     origin: 'América Central, em águas doces e ambientes de correnteza fraca.',
     size: 'Cerca de 4–6 cm.',
@@ -61,7 +61,7 @@ const speciesGuide = [
   },
   {
     name: 'Espada', latin: 'Xiphophorus hellerii',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_hellerii_red_male_01.jpg?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_hellerii_red_male_01.jpg?width=1000', photoCredit: 'Wojciech J. Płuciennik · CC BY-SA 4.0 · Wikimedia Commons',
     summary: 'Vivíparo ativo; o macho costuma apresentar uma extensão em forma de espada na cauda.',
     origin: 'México e América Central, em rios e águas doces variadas.',
     size: 'Geralmente 8–12 cm; machos podem parecer maiores por causa da extensão caudal.',
@@ -76,7 +76,7 @@ const speciesGuide = [
   },
   {
     name: 'Molinésia', latin: 'Poecilia sphenops',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Neon_Orange_Molly_Fish.jpg?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Neon_Orange_Molly_Fish.jpg?width=1000', photoCredit: 'Gerardeen92 · CC BY-SA 4.0 · Wikimedia Commons',
     summary: 'Vivíparo robusto, com grande variedade de formas e cores.',
     origin: 'México e América Central; algumas populações vivem em águas com diferentes níveis de salinidade.',
     size: 'Em geral 6–10 cm, dependendo da variedade e da linhagem.',
@@ -766,7 +766,7 @@ function Dashboard({ user, onSignOut }) {
 
       {mobileMenu && <button className="mobile-scrim" onClick={() => setMobileMenu(false)} aria-label="Fechar menu"/>}
 
-      {selectedSpecies && <div className="species-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectedSpecies(null); }}><section className="species-detail-modal" role="dialog" aria-modal="true" aria-labelledby="species-detail-title"><button type="button" className="species-detail-close" onClick={() => setSelectedSpecies(null)} aria-label="Fechar ficha"><X size={20}/></button><img className="species-detail-image" src={selectedSpecies.image} alt={selectedSpecies.name} onError={event => { event.currentTarget.style.display = 'none'; }}/><div className="species-detail-content"><span className="eyebrow">GUIA DE ESPÉCIES • AQUAPROFISH</span><h2 id="species-detail-title">{selectedSpecies.name}</h2><i className="species-detail-latin">{selectedSpecies.latin}</i><p className="species-detail-summary">{selectedSpecies.summary}</p><div className="species-facts-grid"><div><small>Temperatura</small><strong>{selectedSpecies.temperature}</strong></div><div><small>pH</small><strong>{selectedSpecies.ph}</strong></div><div><small>Dureza</small><strong>{selectedSpecies.hardness}</strong></div><div><small>Tamanho adulto</small><strong>{selectedSpecies.size}</strong></div></div><div className="species-detail-sections">{[['Origem',selectedSpecies.origin],['Aquário recomendado',selectedSpecies.aquarium],['Alimentação',selectedSpecies.food],['Comportamento',selectedSpecies.behavior],['Compatibilidade',selectedSpecies.compatibility],['Reprodução',selectedSpecies.reproduction],['Você sabia?',selectedSpecies.facts],['Cuidados importantes',selectedSpecies.care]].map(([heading,body]) => <article key={heading}><h3>{heading}</h3><p>{body}</p></article>)}</div><p className="species-disclaimer">Parâmetros e tamanhos são referências gerais. A necessidade real varia conforme linhagem, origem, idade, população e qualidade da água. Priorize estabilidade e pesquise a variedade específica.</p><button type="button" className="primary-button species-back-button" onClick={() => setSelectedSpecies(null)}>Voltar ao guia</button></div></section></div>}
+      {selectedSpecies && <div className="species-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectedSpecies(null); }}><section className="species-detail-modal" role="dialog" aria-modal="true" aria-labelledby="species-detail-title"><button type="button" className="species-detail-close" onClick={() => setSelectedSpecies(null)} aria-label="Fechar ficha"><X size={20}/></button><img className="species-detail-image" src={selectedSpecies.image} alt={selectedSpecies.name} onError={event => { event.currentTarget.style.display = 'none'; }}/><div className="species-detail-content"><span className="eyebrow">GUIA DE ESPÉCIES • AQUAPROFISH</span><h2 id="species-detail-title">{selectedSpecies.name}</h2><i className="species-detail-latin">{selectedSpecies.latin}</i><p className="species-detail-summary">{selectedSpecies.summary}</p><p className="species-photo-credit" style={{fontSize:12,opacity:0.72,marginTop:-8}}>Foto: {selectedSpecies.photoCredit}</p><div className="species-facts-grid"><div><small>Temperatura</small><strong>{selectedSpecies.temperature}</strong></div><div><small>pH</small><strong>{selectedSpecies.ph}</strong></div><div><small>Dureza</small><strong>{selectedSpecies.hardness}</strong></div><div><small>Tamanho adulto</small><strong>{selectedSpecies.size}</strong></div></div><div className="species-detail-sections">{[['Origem',selectedSpecies.origin],['Aquário recomendado',selectedSpecies.aquarium],['Alimentação',selectedSpecies.food],['Comportamento',selectedSpecies.behavior],['Compatibilidade',selectedSpecies.compatibility],['Reprodução',selectedSpecies.reproduction],['Você sabia?',selectedSpecies.facts],['Cuidados importantes',selectedSpecies.care]].map(([heading,body]) => <article key={heading}><h3>{heading}</h3><p>{body}</p></article>)}</div><p className="species-disclaimer">Parâmetros e tamanhos são referências gerais. A necessidade real varia conforme linhagem, origem, idade, população e qualidade da água. Priorize estabilidade e pesquise a variedade específica.</p><button type="button" className="primary-button species-back-button" onClick={() => setSelectedSpecies(null)}>Voltar ao guia</button></div></section></div>}
 
       {confirmDialog && <div className="confirm-modal-backdrop" role="presentation"><section className="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message"><div className="confirm-modal-heading"><h2 id="confirm-title">Confirmar ação</h2></div><p id="confirm-message">{confirmDialog}</p><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => finishConfirmation(false)}>Cancelar</button><button type="button" className="danger-confirm-button" onClick={() => finishConfirmation(true)}>Confirmar</button></div></section></div>}
 
