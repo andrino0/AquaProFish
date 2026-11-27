@@ -16,7 +16,8 @@
     "react-dom": "^18.3.1",
     "@supabase/supabase-js": "^2.57.0",
     "@capacitor/core": "^6.2.1",
-    "@capacitor/android": "^6.2.1"
+    "@capacitor/android": "^6.2.1",
+    "@capgo/capacitor-updater": "lts-v6"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
