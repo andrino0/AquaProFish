@@ -92,6 +92,12 @@ jobs:
           await fs.rm(`${adaptiveDir}/ic_launcher_round.xml`, { force: true });
           console.log('PNG launcher icons written for all Android densities; adaptive XML icons removed.');
           NODE
+      - name: Restore stable Android debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: aquaprofish-android-debug-signing-key-v1
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug
