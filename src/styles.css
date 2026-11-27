@@ -117,3 +117,31 @@
 
 
 .confirm-modal-backdrop{position:fixed;inset:0;background:#020b13d9;z-index:80;display:grid;place-items:center;padding:18px}.confirm-modal{width:min(420px,100%);background:linear-gradient(145deg,#0d2638,#0a1b2a);border:1px solid #285a70;border-radius:15px;padding:22px;box-shadow:0 22px 80px #000a}.confirm-modal-heading{margin-bottom:14px}.confirm-modal-heading h2{font:650 19px Outfit;margin:0;color:#f3f9fc}.confirm-modal>p{font-size:13px;line-height:1.65;color:#c0d3df;margin:0 0 20px;white-space:pre-line}.danger-confirm-button{border:1px solid #a74d58;background:#7d303d;color:#fff;padding:10px 15px;border-radius:7px;font-size:11px;font-weight:750}.danger-confirm-button:hover{background:#963d4b}
+
+
+/* Guia de espécies: cartões clicáveis e fichas detalhadas */
+.species-card-button{width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer;align-items:flex-start;transition:border-color .18s,transform .18s}
+.species-card-button:hover{border-color:#35b8d0;transform:translateY(-2px)}
+.species-thumb{width:76px;height:76px;flex:0 0 76px;object-fit:cover;border-radius:10px;background:#12384b}
+.species-fallback{display:none;width:76px;height:76px;flex:0 0 76px}
+.species-card-copy{min-width:0;flex:1}
+.species-open{display:inline-flex;align-items:center;gap:3px;margin-top:9px;color:#55cde2;font-size:10px;font-weight:800}
+.species-modal-backdrop{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:14px;background:#020b13e8}
+.species-detail-modal{position:relative;width:min(760px,100%);max-height:94vh;overflow:auto;border:1px solid #28566d;border-radius:16px;background:#0b1f2e;box-shadow:0 24px 90px #000b}
+.species-detail-close{position:absolute;z-index:2;top:12px;right:12px;width:38px;height:38px;display:grid;place-items:center;border:1px solid #ffffff55;border-radius:50%;background:#071724d9;color:#fff;cursor:pointer}
+.species-detail-image{display:block;width:100%;height:220px;object-fit:cover;background:#102f42}
+.species-detail-content{padding:22px}
+.species-detail-content h2{margin:6px 0 2px;color:#f2fbff;font:800 27px Outfit,sans-serif}
+.species-detail-latin{color:#57c8da;font-size:12px}
+.species-detail-summary{color:#b5cad6;font-size:13px;line-height:1.6}
+.species-facts-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:18px 0;padding:13px;border:1px solid #1c4559;border-radius:11px;background:#0e2a3c}
+.species-facts-grid div{display:grid;gap:5px;min-width:0}
+.species-facts-grid small{color:#7fa2b5;font-size:9px}
+.species-facts-grid strong{color:#e5f6fc;font-size:11px}
+.species-detail-sections{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.species-detail-sections article{padding:13px;border:1px solid #1b3e52;border-radius:10px;background:#0d2638}
+.species-detail-sections h3{margin:0 0 6px;color:#59c9dc;font:700 12px Outfit,sans-serif}
+.species-detail-sections p{margin:0;color:#b4c9d5;font-size:11px;line-height:1.65}
+.species-disclaimer{margin:16px 0;color:#7999ac;font-size:10px;line-height:1.6}
+.species-back-button{width:100%;justify-content:center}
+@media(max-width:560px){.species-thumb,.species-fallback{width:64px;height:64px;flex-basis:64px}.species-detail-image{height:170px}.species-detail-content{padding:17px}.species-facts-grid{grid-template-columns:1fr 1fr}.species-detail-sections{grid-template-columns:1fr}.species-detail-content h2{font-size:23px}}
