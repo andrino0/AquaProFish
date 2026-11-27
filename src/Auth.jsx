@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { supabase } from './lib/supabase.js';
 import { Fish, Waves } from 'lucide-react';
 
+const APP_URL = 'https://andrino0.github.io/AquaProFish/';
+
 export default function Auth() {
   const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
@@ -17,11 +19,16 @@ export default function Auth() {
     try {
       if (mode === 'signup') {
         const { data, error: authError } = await supabase.auth.signUp({
-          email, password, options: { data: { display_name: name.trim() } }
+          email,
+          password,
+          options: {
+            data: { display_name: name.trim() },
+            emailRedirectTo: APP_URL
+          }
         });
         if (authError) throw authError;
         if (data.session) setMessage('Cadastro realizado! Entrando na sua conta...');
-        else setMessage('Cadastro iniciado! Confira seu e-mail para confirmar a conta e depois entre no AquaProFish.');
+        else setMessage('Cadastro iniciado! Confira seu e-mail para confirmar a conta.');
       } else {
         const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
         if (authError) throw authError;
@@ -31,11 +38,24 @@ export default function Auth() {
     } finally { setBusy(false); }
   }
 
+  async function resendConfirmation() {
+    if (!email.trim()) { setError('Digite o mesmo e-mail usado no cadastro.'); return; }
+    setBusy(true); setError(''); setMessage('');
+    const { error: authError } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: { emailRedirectTo: APP_URL }
+    });
+    if (authError) setError(authError.message);
+    else setMessage('Se a conta ainda precisar de confirmação, enviaremos um novo e-mail. Confira também o spam.');
+    setBusy(false);
+  }
+
   async function resetPassword() {
     if (!email.trim()) { setError('Digite seu e-mail primeiro.'); return; }
     setBusy(true); setError(''); setMessage('');
     const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname
+      redirectTo: APP_URL
     });
     if (authError) setError(authError.message);
     else setMessage('Se esse e-mail estiver cadastrado, você receberá instruções para redefinir a senha.');
@@ -54,7 +74,10 @@ export default function Auth() {
         {message && <p className="auth-message" role="status">{message}</p>}
         <button className="primary-button auth-submit" type="submit" disabled={busy}>{busy ? 'Aguarde...' : mode === 'signup' ? 'Criar minha conta' : 'Entrar'}</button>
       </form>
-      {mode === 'login' && <button className="auth-link" type="button" onClick={resetPassword} disabled={busy}>Esqueci minha senha</button>}
+      {mode === 'login' && <>
+        <button className="auth-link" type="button" onClick={resetPassword} disabled={busy}>Esqueci minha senha</button>
+        <button className="auth-link" type="button" onClick={resendConfirmation} disabled={busy}>Reenviar e-mail de confirmação</button>
+      </>}
       <div className="auth-switch">{mode === 'signup' ? 'Já tem uma conta?' : 'Ainda não tem uma conta?'} <button type="button" onClick={()=>{setMode(mode==='signup'?'login':'signup');setError('');setMessage('');}}>{mode === 'signup' ? 'Entrar' : 'Criar conta'}</button></div>
       <p className="auth-foot">Sua conta é protegida pelo Supabase. Nunca compartilhe sua senha.</p>
     </section>
