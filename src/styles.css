@@ -43,3 +43,11 @@
 .app-download-nav{width:calc(100% - 6px);margin:0 3px 12px;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 10px;border:1px solid #248ca8;border-radius:9px;background:linear-gradient(110deg,#087f9f,#10516c);color:#effcff;text-decoration:none;font-size:13px;font-weight:800;box-shadow:0 5px 16px #00608035;transition:filter .15s,transform .15s}
 .app-download-nav:hover{filter:brightness(1.15);transform:translateY(-1px)}
 .app-download-nav svg{flex-shrink:0;color:#79e6f1}
+
+/* Compacta a logomarca no menu e mantém o nome AquaProFish ao lado */
+.brand{gap:11px;min-height:76px}
+.brand-logo{width:62px;height:62px;max-height:62px;object-fit:contain;object-position:center;flex:0 0 62px}
+.brand-copy{min-width:0;flex:1}
+.brand-copy strong{font:800 21px Outfit,sans-serif;letter-spacing:-.6px;display:block;color:#fff;white-space:nowrap}
+.brand-copy strong span{color:#40c9e4}
+.brand-copy small{display:block;font-size:7px;letter-spacing:1.1px;color:#84a5ba;margin-top:3px;line-height:1.4}
