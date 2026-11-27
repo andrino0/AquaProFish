@@ -294,6 +294,9 @@ function Dashboard({ user, onSignOut }) {
         </nav>
         <div className="sidebar-bottom">
           <div className="help-card"><Sparkles size={18}/><strong>Um aquário saudável começa com bons cuidados.</strong><span>Registre, acompanhe e evolua.</span></div>
+          <a className="app-download-nav" href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk" aria-label="Baixe aqui o app AquaProFish">
+            <Download size={18}/><span>Baixe aqui o app</span>
+          </a>
           <button className="nav-item"><Settings size={19}/><span>Configurações</span></button>
           <div className="profile"><div className="avatar">A</div><div><strong>Aquarista</strong><small>Minha conta</small></div></div>
         </div>
