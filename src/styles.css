@@ -112,3 +112,5 @@
 .post-author{flex:1}
 .post-delete-button{margin-left:auto}
 .comment-delete-button{flex:0 0 auto;margin-left:4px}
+
+.task-edit-button{flex:0 0 auto;padding:5px}.field-hint{margin:-5px 0 4px;color:#7798aa;font-size:10px;line-height:1.5}
