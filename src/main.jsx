@@ -12,6 +12,15 @@ if (Capacitor.isNativePlatform()) {
   });
 }
 
+// Registra o service worker para permitir instalar o AquaProFish pelo navegador.
+if ('serviceWorker' in navigator && !Capacitor.isNativePlatform()) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(error => {
+      console.warn('AquaProFish: não foi possível registrar o modo instalável:', error);
+    });
+  });
+}
+
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
