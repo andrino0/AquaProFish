@@ -16,7 +16,7 @@ const initialPosts = [];
 const speciesGuide = [
   {
     name: 'Guppy', latin: 'Poecilia reticulata',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Poecilia_reticulata_(male).JPG?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Guppy_red_male.jpg?width=1000',
     summary: 'Pequeno vivíparo, ativo e famoso pela variedade de cores e caudas.',
     origin: 'América do Sul e Caribe; ocorre naturalmente em diferentes ambientes de água doce.',
     size: 'Machos geralmente 2–3 cm; fêmeas podem chegar a cerca de 5–6 cm.',
@@ -31,7 +31,7 @@ const speciesGuide = [
   },
   {
     name: 'Betta', latin: 'Betta splendens',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Betta_Splendens,_male.jpg?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Betta_splendens_male_with_bubble_nest.jpg?width=1000',
     summary: 'Peixe labirintídeo conhecido pelas cores, nadadeiras e comportamento territorial.',
     origin: 'Sudeste Asiático, especialmente Tailândia e regiões próximas; habita águas rasas e lentas.',
     size: 'Em geral 5–7 cm, sem contar variações de nadadeiras.',
@@ -46,7 +46,7 @@ const speciesGuide = [
   },
   {
     name: 'Platy', latin: 'Xiphophorus maculatus',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_maculatus.jpg',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Red_Wag_Platies.JPG?width=1000',
     summary: 'Vivíparo sociável, resistente e disponível em muitas cores.',
     origin: 'América Central, em águas doces e ambientes de correnteza fraca.',
     size: 'Cerca de 4–6 cm.',
@@ -61,7 +61,7 @@ const speciesGuide = [
   },
   {
     name: 'Espada', latin: 'Xiphophorus hellerii',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_hellerii_-_male_and_female.jpg?width=1000',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_hellerii_red_male_01.jpg?width=1000',
     summary: 'Vivíparo ativo; o macho costuma apresentar uma extensão em forma de espada na cauda.',
     origin: 'México e América Central, em rios e águas doces variadas.',
     size: 'Geralmente 8–12 cm; machos podem parecer maiores por causa da extensão caudal.',
@@ -76,7 +76,7 @@ const speciesGuide = [
   },
   {
     name: 'Molinésia', latin: 'Poecilia sphenops',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Poecilia_sphenops.jpg',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Neon_Orange_Molly_Fish.jpg?width=1000',
     summary: 'Vivíparo robusto, com grande variedade de formas e cores.',
     origin: 'México e América Central; algumas populações vivem em águas com diferentes níveis de salinidade.',
     size: 'Em geral 6–10 cm, dependendo da variedade e da linhagem.',
