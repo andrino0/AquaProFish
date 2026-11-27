@@ -3,7 +3,7 @@ import Auth from './Auth.jsx';
 import { supabase } from './lib/supabase.js';
 import {
   Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Droplets,
-  Fish, HeartPulse, Home, Menu, MessageCircle, Pencil, Plus, Search, Settings,
+  Fish, Heart, HeartPulse, Home, Menu, MessageCircle, Pencil, Plus, Search, Settings,
   Sparkles, Thermometer, Waves, X
 } from 'lucide-react';
 
@@ -30,6 +30,9 @@ function Dashboard({ user, onSignOut }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [saveError, setSaveError] = useState('');
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [commentDrafts, setCommentDrafts] = useState({});
+  const [expandedComments, setExpandedComments] = useState({});
+  const [likeBusy, setLikeBusy] = useState({});
 
   useEffect(() => {
     if (!user?.id) return;
@@ -69,14 +72,16 @@ function Dashboard({ user, onSignOut }) {
     let active = true;
     async function loadWorkspace() {
       setDataLoading(true);
-      const [tankResult, fishResult, taskResult, postResult, profileResult] = await Promise.all([
+      const [tankResult, fishResult, taskResult, postResult, profileResult, likeResult, commentResult] = await Promise.all([
         supabase.from('aquariums').select('*').order('created_at', { ascending: false }),
         supabase.from('fish').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
         supabase.from('posts').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('id,display_name')
+        supabase.from('profiles').select('id,display_name'),
+        supabase.from('post_likes').select('post_id,user_id'),
+        supabase.from('post_comments').select('*').order('created_at', { ascending: true })
       ]);
-      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error;
+      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error || likeResult.error || commentResult.error;
       if (failure) {
         console.error('Erro ao carregar dados do AquaProFish:', failure);
         if (active) setSaveError('Não foi possível carregar todos os dados. Verifique sua conexão e tente atualizar.');
@@ -97,9 +102,18 @@ function Dashboard({ user, onSignOut }) {
         })));
         setTasks((taskResult.data || []).map(t => ({ id: t.id, title: t.title, detail: t.detail || '', done: t.completed })));
         const profiles = profileResult.data || [];
+        const likes = likeResult.data || [];
+        const comments = commentResult.data || [];
         setPosts((postResult.data || []).map(p => ({
           id: p.id, author: profiles.find(profile => profile.id === p.user_id)?.display_name || 'Aquarista',
-          time: new Date(p.created_at).toLocaleString('pt-BR'), text: p.content, likes: p.likes || 0,
+          time: new Date(p.created_at).toLocaleString('pt-BR'), text: p.content,
+          likes: likes.filter(like => like.post_id === p.id).length,
+          likedByMe: likes.some(like => like.post_id === p.id && like.user_id === user.id),
+          comments: comments.filter(comment => comment.post_id === p.id).map(comment => ({
+            id: comment.id, userId: comment.user_id,
+            author: profiles.find(profile => profile.id === comment.user_id)?.display_name || (comment.user_id === user.id ? (user.user_metadata?.display_name || 'Você') : 'Aquarista'),
+            text: comment.content, time: new Date(comment.created_at).toLocaleString('pt-BR')
+          })),
           tag: 'Comunidade'
         })));
         setSaveError('');
@@ -205,8 +219,50 @@ function Dashboard({ user, onSignOut }) {
       user_id: user.id, content: form.text.trim()
     }).select().single();
     if (error) { setSaveError('Não foi possível publicar: ' + error.message); return; }
-    setPosts([{ id: data.id, author: user.user_metadata?.display_name || user.email || 'Você', time: 'Agora', text: data.content, likes: 0, tag: 'Comunidade' }, ...posts]);
+    setPosts([{ id: data.id, author: user.user_metadata?.display_name || user.user_metadata?.name || 'Você', time: 'Agora', text: data.content, likes: 0, likedByMe: false, comments: [], tag: 'Comunidade' }, ...posts]);
     setModal('');
+  }
+
+  async function toggleLike(postId) {
+    if (likeBusy[postId]) return;
+    const post = posts.find(item => item.id === postId);
+    if (!post) return;
+    setLikeBusy(current => ({ ...current, [postId]: true }));
+    setSaveError('');
+    const request = post.likedByMe
+      ? supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id)
+      : supabase.from('post_likes').insert({ post_id: postId, user_id: user.id });
+    const { error } = await request;
+    if (error) {
+      setSaveError('Não foi possível registrar sua curtida: ' + error.message);
+    } else {
+      setPosts(current => current.map(item => item.id === postId ? {
+        ...item, likedByMe: !item.likedByMe, likes: Math.max(0, item.likes + (item.likedByMe ? -1 : 1))
+      } : item));
+    }
+    setLikeBusy(current => ({ ...current, [postId]: false }));
+  }
+
+  async function submitComment(postId) {
+    const content = String(commentDrafts[postId] || '').trim();
+    if (!content) return;
+    setSaveError('');
+    const { data, error } = await supabase.from('post_comments').insert({
+      post_id: postId, user_id: user.id, content
+    }).select().single();
+    if (error) {
+      setSaveError('Não foi possível publicar o comentário: ' + error.message);
+      return;
+    }
+    const author = user.user_metadata?.display_name || user.user_metadata?.name || 'Você';
+    setPosts(current => current.map(item => item.id === postId ? {
+      ...item, comments: [...(item.comments || []), {
+        id: data.id, userId: user.id, author, text: data.content,
+        time: new Date(data.created_at).toLocaleString('pt-BR')
+      }]
+    } : item));
+    setCommentDrafts(current => ({ ...current, [postId]: '' }));
+    setExpandedComments(current => ({ ...current, [postId]: true }));
   }
 
   async function toggleTask(id) {
@@ -286,7 +342,24 @@ function Dashboard({ user, onSignOut }) {
 
           {section === 'Rotina' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Rotina de cuidados</h3><p>Marque as atividades conforme forem concluídas</p></div><span className="count-label">{tasks.filter(t=>t.done).length} de {tasks.length} concluídas</span></div><div className="progress-track"><div style={{width: (tasks.length ? tasks.filter(t=>t.done).length/tasks.length*100 : 0) + '%'}}/></div><div className="routine-list">{tasks.map(t => <label className={`task-row routine-task ${t.done ? 'task-done' : ''}`} key={t.id}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}</small></span><span className={t.done ? 'tag success' : 'tag warning'}>{t.done ? 'Concluída' : 'Pendente'}</span></label>)}</div><p className="note">Nesta primeira versão, as tarefas são salvas neste dispositivo. Lembretes automáticos serão adicionados na próxima etapa.</p></section>}
 
-          {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Compartilhe experiências e acompanhe os aquaristas que estão conectados agora.</p></div></div><div className="online-panel"><div className="online-heading"><div><strong>Aquaristas online agora</strong><small>Presença em tempo real na comunidade</small></div><span className="online-count">{onlineUsers.length}</span></div>{onlineUsers.length ? <div className="online-list">{onlineUsers.map(person => <div className="online-person" key={person.user_id}><span className="online-avatar">{String(person.display_name || 'A').trim().charAt(0).toUpperCase()}</span><strong>{person.display_name || 'Aquarista'}</strong><i title="Online agora"/></div>)}</div> : <p className="online-empty">Ainda não há outros aquaristas conectados. Quando alguém entrar, aparecerá aqui.</p>}</div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div><p>{post.text}</p><div className="post-actions"><span><HeartPulse size={16}/> {post.likes} curtidas</span><span><MessageCircle size={16}/> Comentários em breve</span></div></article>)}</div><p className="note">As publicações são salvas na sua conta. Fotos e comentários serão adicionados na próxima etapa.</p></section>}
+          {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Compartilhe experiências e acompanhe os aquaristas que estão conectados agora.</p></div></div><div className="online-panel"><div className="online-heading"><div><strong>Aquaristas online agora</strong><small>Presença em tempo real na comunidade</small></div><span className="online-count">{onlineUsers.length}</span></div>{onlineUsers.length ? <div className="online-list">{onlineUsers.map(person => <div className="online-person" key={person.user_id}><span className="online-avatar">{String(person.display_name || 'A').trim().charAt(0).toUpperCase()}</span><strong>{person.display_name || 'Aquarista'}</strong><i title="Online agora"/></div>)}</div> : <p className="online-empty">Ainda não há outros aquaristas conectados. Quando alguém entrar, aparecerá aqui.</p>}</div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div><p>{post.text}</p><div className="post-actions">
+                  <button type="button" className={post.likedByMe ? 'post-action liked' : 'post-action'} onClick={() => toggleLike(post.id)} disabled={!!likeBusy[post.id]}>
+                    <Heart size={17} fill={post.likedByMe ? 'currentColor' : 'none'}/> {post.likes} {post.likes === 1 ? 'curtida' : 'curtidas'}
+                  </button>
+                  <button type="button" className="post-action" onClick={() => setExpandedComments(current => ({ ...current, [post.id]: !current[post.id] }))}>
+                    <MessageCircle size={17}/> {(post.comments || []).length} {(post.comments || []).length === 1 ? 'comentário' : 'comentários'}
+                  </button>
+                </div>
+                {expandedComments[post.id] && <div className="post-comments">
+                  {(post.comments || []).length ? <div className="comment-list">{post.comments.map(comment => <div className="comment-item" key={comment.id}>
+                    <div className="comment-avatar">{String(comment.author || 'A').trim().charAt(0).toUpperCase()}</div>
+                    <div className="comment-body"><strong>{comment.author}</strong><p>{comment.text}</p><small>{comment.time}</small></div>
+                  </div>)}</div> : <p className="comments-empty">Seja o primeiro a comentar.</p>}
+                  <form className="comment-form" onSubmit={event => { event.preventDefault(); submitComment(post.id); }}>
+                    <input aria-label="Escreva um comentário" value={commentDrafts[post.id] || ''} onChange={event => setCommentDrafts(current => ({ ...current, [post.id]: event.target.value }))} placeholder="Escreva um comentário..." maxLength={2000}/>
+                    <button type="submit" className="comment-send" disabled={!String(commentDrafts[post.id] || '').trim()}>Enviar</button>
+                  </form>
+                </div></article>)}</div><p className="note">As publicações, curtidas e comentários ficam salvos no banco de dados da comunidade.</p></section>}
 
           {section === 'Guia de espécies' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Conheça as espécies</h3><p>Uma base inicial para organizar seu conhecimento</p></div><span className="tag info">Em expansão</span></div><div className="species-grid">{[['Guppy','Poecilia reticulata','Peixe vivíparo, ativo e muito apreciado pela variedade de cores.'],['Betta','Betta splendens','Peixe de personalidade marcante. Machos geralmente devem ser mantidos separados.'],['Platy','Xiphophorus maculatus','Vivíparo resistente e sociável, com muitas variedades.'],['Espada','Xiphophorus hellerii','Vivíparo conhecido pela extensão da nadadeira caudal dos machos.'],['Molinésia','Poecilia sphenops','Peixe vivíparo que aprecia água estável e alimentação variada.']].map(([name,latin,desc])=><article className="species-card" key={name}><div className="species-illustration"><Fish size={32}/></div><div><h3>{name}</h3><i>{latin}</i><p>{desc}</p></div></article>)}</div></section>}
         </div>
