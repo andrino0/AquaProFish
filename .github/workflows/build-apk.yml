@@ -36,9 +36,11 @@ jobs:
           node --input-type=module <<'NODE'
           import sharp from 'sharp';
           const logo = Buffer.from(await (await import('node:fs/promises')).readFile('public/aquaprofish-logo.svg'));
-          await sharp({ create: { width: 1024, height: 1024, channels: 4, background: '#071a2b' } })
+          const appIcon = await sharp({ create: { width: 1024, height: 1024, channels: 4, background: '#071a2b' } })
             .composite([{ input: await sharp(logo).resize(820, 692, { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
-            .png().toFile('assets/icon-only.png');
+            .png().toBuffer();
+          await sharp(appIcon).png().toFile('assets/icon.png');
+          await sharp(appIcon).png().toFile('assets/icon-only.png');
           await sharp({ create: { width: 2732, height: 2732, channels: 4, background: '#071a2b' } })
             .composite([{ input: await sharp(logo).resize(1900, 1603, { fit: 'contain' }).png().toBuffer(), gravity: 'centre' }])
             .png().toFile('assets/splash.png');
