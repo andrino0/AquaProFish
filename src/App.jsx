@@ -265,14 +265,14 @@ function Dashboard({ user, onSignOut }) {
             <section className="welcome-banner"><div className="banner-copy"><span className="banner-kicker">BEM-VINDO AO AQUAPROFISH</span><h2>Mais cuidado para seus peixes.<br/><em>Mais vida para seu aquário.</em></h2><p>Tenha o controle da sua criação e acompanhe cada evolução.</p><button onClick={() => setSection('Aquários')} className="banner-button">Explorar meus aquários <ChevronRight size={17}/></button></div><div className="banner-art"><div className="bubble b1"/><div className="bubble b2"/><div className="bubble b3"/><Fish className="hero-fish f1"/><Fish className="hero-fish f2"/><Fish className="hero-fish f3"/><Waves className="hero-waves"/></div></section>
             <div className="section-title"><div><h2>Visão geral</h2><p>Resumo do seu ambiente aquático</p></div><span className="date-label"><CalendarDays size={15}/> Hoje</span></div>
             <div className="stats-grid">
-              <Stat icon={Waves} label="Meus aquários" value={tanks.length} note="Ambientes cadastrados" tone="blue"/>
-              <Stat icon={Fish} label="Total de peixes" value={totalFish} note="Peixes registrados" tone="cyan"/>
-              <Stat icon={Activity} label="Tarefas pendentes" value={tasks.filter(t => !t.done).length} note="Cuidados para hoje" tone="purple"/>
-              <Stat icon={HeartPulse} label="Saúde dos aquários" value={tanks.filter(t => t.status === 'Estável').length + '/' + tanks.length} note="Marcados como estáveis" tone="green"/>
+              <Stat icon={Waves} label="Meus aquários" value={tanks.length} note="Toque para gerenciar" tone="blue" onClick={() => setSection('Aquários')}/>
+              <Stat icon={Fish} label="Total de peixes" value={totalFish} note="Toque para gerenciar" tone="cyan" onClick={() => setSection('Meus peixes')}/>
+              <Stat icon={Activity} label="Tarefas pendentes" value={tasks.filter(t => !t.done).length} note="Toque para abrir a rotina" tone="purple" onClick={() => setSection('Rotina')}/>
+              <Stat icon={HeartPulse} label="Saúde dos aquários" value={tanks.filter(t => t.status === 'Estável').length + '/' + tanks.length} note="Toque para ver aquários" tone="green" onClick={() => setSection('Aquários')}/>
             </div>
             <div className="dashboard-grid">
               <section className="panel"><div className="panel-heading"><div><h3>Meus aquários</h3><p>Resumo dos seus ambientes</p></div><button className="text-button" onClick={() => setSection('Aquários')}>Ver todos <ChevronRight size={15}/></button></div>
-                <div className="tank-list">{tanks.slice(0,3).map(t => <div className="tank-row" key={t.id}><div className="tank-icon"><Waves size={21}/></div><div className="tank-info"><strong>{t.name}</strong><small>{t.volume} • {t.fish} peixes</small></div><span className={t.status === 'Atenção' ? 'tag warning' : 'tag success'}>{t.status}</span></div>)}</div>
+                <div className="tank-list">{tanks.slice(0,3).map(t => <div className="tank-row" key={t.id} role="button" tabIndex={0} onClick={() => editTank(t)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') editTank(t); }}><div className="tank-icon"><Waves size={21}/></div><div className="tank-info"><strong>{t.name}</strong><small>{t.volume} • {t.fish} peixes</small></div><span className={t.status === 'Atenção' ? 'tag warning' : 'tag success'}>{t.status}</span></div>)}</div>
               </section>
               <section className="panel"><div className="panel-heading"><div><h3>Cuidados de hoje</h3><p>Não deixe a rotina passar</p></div><button className="text-button" onClick={() => setSection('Rotina')}>Ver rotina <ChevronRight size={15}/></button></div>
                 <div className="task-list">{tasks.slice(0,3).map(t => <label className={`task-row ${t.done ? 'task-done' : ''}`} key={t.id}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}</small></span></label>)}</div>
@@ -306,8 +306,8 @@ function Dashboard({ user, onSignOut }) {
   );
 }
 
-function Stat({ icon: Icon, label, value, note, tone }) {
-  return <article className="stat-card"><div className={'stat-icon '+tone}><Icon size={20}/></div><span>{label}</span><strong>{value}</strong><small>{note}</small></article>;
+function Stat({ icon: Icon, label, value, note, tone, onClick }) {
+  return <article className="stat-card" role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onClick={onClick} onKeyDown={e => { if (onClick && (e.key === 'Enter' || e.key === ' ')) onClick(); }} style={onClick ? {cursor:'pointer'} : undefined}><div className={'stat-icon '+tone}><Icon size={20}/></div><span>{label}</span><strong>{value}</strong><small>{note}</small></article>;
 }
 function Field({ label, value, onChange, placeholder, type='text', area=false }) {
   return <label className="field"><span>{label}</span>{area ? <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows="4"/> : <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>}</label>;
