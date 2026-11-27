@@ -46,7 +46,7 @@ const speciesGuide = [
   },
   {
     name: 'Platy', latin: 'Xiphophorus maculatus',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Peixe_platy_brazil.JPG?width=1000', photoCredit: 'Fred quatro14 brazil · domínio público · Wikimedia Commons',
+    image: 'https://raw.githubusercontent.com/andrino0/AquaProFish/main/public/plati-p1-wagtail.jpg', photoCredit: 'Fred quatro14 brazil · domínio público · Wikimedia Commons',
     summary: 'Vivíparo sociável, resistente e disponível em muitas cores.',
     origin: 'América Central, em águas doces e ambientes de correnteza fraca.',
     size: 'Cerca de 4–6 cm.',
@@ -61,7 +61,7 @@ const speciesGuide = [
   },
   {
     name: 'Espada', latin: 'Xiphophorus hellerii',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Xiphophorus_hellerii_red_male_01.jpg?width=1000', photoCredit: 'Wojciech J. Płuciennik · CC BY-SA 4.0 · Wikimedia Commons',
+    image: 'https://raw.githubusercontent.com/andrino0/AquaProFish/main/public/espada-e1-vermelho.jpg', photoCredit: 'Wojciech J. Płuciennik · CC BY-SA 4.0 · Wikimedia Commons',
     summary: 'Vivíparo ativo; o macho costuma apresentar uma extensão em forma de espada na cauda.',
     origin: 'México e América Central, em rios e águas doces variadas.',
     size: 'Geralmente 8–12 cm; machos podem parecer maiores por causa da extensão caudal.',
@@ -76,7 +76,7 @@ const speciesGuide = [
   },
   {
     name: 'Molinésia', latin: 'Poecilia sphenops',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Black_Molly.jpg?width=1000', photoCredit: 'Marrabbio · CC BY-SA 3.0 · Wikimedia Commons',
+    image: 'https://raw.githubusercontent.com/andrino0/AquaProFish/main/public/molin%C3%A9sia-m3-gold-dust.jpg', photoCredit: 'Marrabbio · CC BY-SA 3.0 · Wikimedia Commons',
     summary: 'Vivíparo robusto, com grande variedade de formas e cores.',
     origin: 'México e América Central; algumas populações vivem em águas com diferentes níveis de salinidade.',
     size: 'Em geral 6–10 cm, dependendo da variedade e da linhagem.',
