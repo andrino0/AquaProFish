@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Auth from './Auth.jsx';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from './lib/supabase.js';
@@ -55,6 +55,22 @@ function Dashboard({ user, onSignOut }) {
   const [pixCopied, setPixCopied] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const confirmResolver = useRef(null);
+
+  function confirmAction(message) {
+    return new Promise(resolve => {
+      confirmResolver.current = resolve;
+      setConfirmDialog(message);
+    });
+  }
+
+  function finishConfirmation(confirmed) {
+    const resolve = confirmResolver.current;
+    confirmResolver.current = null;
+    setConfirmDialog(null);
+    if (resolve) resolve(confirmed);
+  }
 
   useEffect(() => {
     if (!user?.id) return;
@@ -350,7 +366,7 @@ function Dashboard({ user, onSignOut }) {
     }
   }
   async function deleteFish(fish) {
-    if (!window.confirm('Excluir o peixe "' + fish.name + '"? Esta ação não pode ser desfeita.')) return;
+    if (!(await confirmAction('Excluir o peixe "' + fish.name + '"? Esta ação não pode ser desfeita.'))) return;
     setSaveError('');
     const { error } = await supabase.from('fish').delete().eq('id', fish.id).eq('user_id', user.id);
     if (error) { setSaveError('Não foi possível excluir o peixe: ' + error.message); return; }
@@ -361,7 +377,7 @@ function Dashboard({ user, onSignOut }) {
   async function deleteTank(tank) {
     const fishCount = fishList.filter(f => f.aquariumId === tank.id).length;
     const warning = fishCount ? ' O banco também excluirá os ' + fishCount + ' cadastro(s) de peixe vinculados a este aquário.' : '';
-    if (!window.confirm('Excluir o aquário "' + tank.name + '"?' + warning + ' Esta ação não pode ser desfeita.')) return;
+    if (!(await confirmAction('Excluir o aquário "' + tank.name + '"?' + warning + ' Esta ação não pode ser desfeita.'))) return;
     setSaveError('');
     const { error } = await supabase.from('aquariums').delete().eq('id', tank.id).eq('user_id', user.id);
     if (error) { setSaveError('Não foi possível excluir o aquário: ' + error.message); return; }
@@ -370,7 +386,7 @@ function Dashboard({ user, onSignOut }) {
   }
 
   async function deleteTask(task) {
-    if (!window.confirm('Excluir a tarefa "' + task.title + '"?')) return;
+    if (!(await confirmAction('Excluir a tarefa "' + task.title + '"?'))) return;
     setSaveError('');
     const { error } = await supabase.from('tasks').delete().eq('id', task.id).eq('user_id', user.id);
     if (error) { setSaveError('Não foi possível excluir a tarefa: ' + error.message); return; }
@@ -378,7 +394,7 @@ function Dashboard({ user, onSignOut }) {
   }
 
   async function deletePost(post) {
-    if (!window.confirm('Excluir esta publicação? As curtidas e os comentários vinculados também serão removidos.')) return;
+    if (!(await confirmAction('Excluir esta publicação? As curtidas e os comentários vinculados também serão removidos.'))) return;
     setSaveError('');
     const { error } = await supabase.from('posts').delete().eq('id', post.id).eq('user_id', user.id);
     if (error) { setSaveError('Não foi possível excluir a publicação: ' + error.message); return; }
@@ -386,7 +402,7 @@ function Dashboard({ user, onSignOut }) {
   }
 
   async function deleteComment(postId, comment) {
-    if (!window.confirm('Excluir seu comentário?')) return;
+    if (!(await confirmAction('Excluir seu comentário?'))) return;
     setSaveError('');
     const { error } = await supabase.from('post_comments').delete().eq('id', comment.id).eq('user_id', user.id);
     if (error) { setSaveError('Não foi possível excluir o comentário: ' + error.message); return; }
@@ -481,7 +497,7 @@ function Dashboard({ user, onSignOut }) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (!window.confirm('Importar este backup? Os registros serão adicionados à sua conta. Os dados atuais não serão apagados e registros com o mesmo identificador serão mantidos.')) return;
+    if (!(await confirmAction('Importar este backup? Os registros serão adicionados à sua conta. Os dados atuais não serão apagados e registros com o mesmo identificador serão mantidos.'))) return;
     setBackupBusy(true);
     setSettingsMessage('');
     try {
@@ -670,6 +686,8 @@ function Dashboard({ user, onSignOut }) {
       </main>
 
       {mobileMenu && <button className="mobile-scrim" onClick={() => setMobileMenu(false)} aria-label="Fechar menu"/>}
+
+      {confirmDialog && <div className="confirm-modal-backdrop" role="presentation"><section className="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message"><div className="confirm-modal-brand"><span className="confirm-brand-mark"><Waves size={19}/></span><div><span className="eyebrow">AQUAPROFISH</span><h2 id="confirm-title">Confirmar ação</h2></div></div><p id="confirm-message">{confirmDialog}</p><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => finishConfirmation(false)}>Cancelar</button><button type="button" className="danger-confirm-button" onClick={() => finishConfirmation(true)}>Confirmar</button></div></section></div>}
 
       {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' || modal === 'editTask' ? submitTask : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : modal === 'editTask' ? 'Editar tarefa' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
         {(modal === 'tank' || modal === 'editTank') && <><Field label="Nome do aquário *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Aquário da sala"/><div className="form-two"><Field label="Volume" value={form.volume || ''} onChange={v=>setForm({...form,volume:v})} placeholder="Ex.: 100 L"/><Field label="Temperatura" value={form.temperature || ''} onChange={v=>setForm({...form,temperature:v})} placeholder="Ex.: 26 °C"/></div><Field label="pH atual" value={form.ph || ''} onChange={v=>setForm({...form,ph:v})} placeholder="Ex.: 7,0"/><label className="field"><span>Situação do aquário</span><select value={form.status || 'Novo'} onChange={e=>setForm({...form,status:e.target.value})}><option value="Novo">Ainda não avaliado</option><option value="Estável">Estável</option><option value="Atenção">Precisa de atenção</option></select></label></>}
