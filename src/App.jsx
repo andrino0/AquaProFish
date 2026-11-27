@@ -16,7 +16,7 @@ const initialPosts = [];
 const speciesGuide = [
   {
     name: 'Guppy', latin: 'Poecilia reticulata',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Guppy_red_male.jpg?width=1000', photoCredit: 'Przemysław Malkowski · CC BY-SA 3.0 · Wikimedia Commons',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Guppy_Guppies.png?width=1000', photoCredit: 'Lauren · CC BY-SA 4.0 · Wikimedia Commons',
     summary: 'Pequeno vivíparo, ativo e famoso pela variedade de cores e caudas.',
     origin: 'América do Sul e Caribe; ocorre naturalmente em diferentes ambientes de água doce.',
     size: 'Machos geralmente 2–3 cm; fêmeas podem chegar a cerca de 5–6 cm.',
@@ -31,7 +31,7 @@ const speciesGuide = [
   },
   {
     name: 'Betta', latin: 'Betta splendens',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Betta_splendens_male_with_bubble_nest.jpg?width=1000', photoCredit: 'ErgoSum88 · domínio público · Wikimedia Commons',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/%2Bm04-122_Queen_Rose_Royal_Lavender.jpg?width=1000', photoCredit: 'Pariskanza · CC BY-SA 4.0 · Wikimedia Commons',
     summary: 'Peixe labirintídeo conhecido pelas cores, nadadeiras e comportamento territorial.',
     origin: 'Sudeste Asiático, especialmente Tailândia e regiões próximas; habita águas rasas e lentas.',
     size: 'Em geral 5–7 cm, sem contar variações de nadadeiras.',
@@ -46,7 +46,7 @@ const speciesGuide = [
   },
   {
     name: 'Platy', latin: 'Xiphophorus maculatus',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Red_Wag_Platies.JPG?width=1000', photoCredit: 'Aaron Tran · CC BY-SA 2.5 · Wikimedia Commons',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Peixe_platy_brazil.JPG?width=1000', photoCredit: 'Fred quatro14 brazil · domínio público · Wikimedia Commons',
     summary: 'Vivíparo sociável, resistente e disponível em muitas cores.',
     origin: 'América Central, em águas doces e ambientes de correnteza fraca.',
     size: 'Cerca de 4–6 cm.',
@@ -76,7 +76,7 @@ const speciesGuide = [
   },
   {
     name: 'Molinésia', latin: 'Poecilia sphenops',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Neon_Orange_Molly_Fish.jpg?width=1000', photoCredit: 'Gerardeen92 · CC BY-SA 4.0 · Wikimedia Commons',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Black_Molly.jpg?width=1000', photoCredit: 'Marrabbio · CC BY-SA 3.0 · Wikimedia Commons',
     summary: 'Vivíparo robusto, com grande variedade de formas e cores.',
     origin: 'México e América Central; algumas populações vivem em águas com diferentes níveis de salinidade.',
     size: 'Em geral 6–10 cm, dependendo da variedade e da linhagem.',
