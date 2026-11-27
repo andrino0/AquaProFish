@@ -83,8 +83,7 @@ function Dashboard({ user, onSignOut }) {
     <div className="app-shell">
       <aside className={`sidebar ${mobileMenu ? 'sidebar-open' : ''}`}>
         <div className="brand">
-          <div className="brand-mark"><Waves size={25} /><Fish size={20} /></div>
-          <div><strong>AquaPro<span>Fish</span></strong><small>GESTÃO • CRIAÇÃO • COMUNIDADE</small></div>
+          <img className="brand-logo" src="/AquaProFish/aquaprofish-logo.svg" alt="AquaProFish — Gestão, Criação e Comunidade" />
           <button className="mobile-close" onClick={() => setMobileMenu(false)} aria-label="Fechar menu"><X size={20}/></button>
         </div>
         <div className="nav-caption">MENU PRINCIPAL</div>
