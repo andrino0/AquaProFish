@@ -57,3 +57,6 @@
 
 /* Mantém o slogan da marca em uma única linha no menu */
 .brand-copy small{font-size:5.5px;letter-spacing:.45px;white-space:nowrap;line-height:1.3}
+
+.footer-download-wrap{width:100%;display:flex;justify-content:center;align-items:center;padding:20px 16px 10px}
+.footer-download-wrap .footer-download{padding:11px 22px;font-size:13px}
