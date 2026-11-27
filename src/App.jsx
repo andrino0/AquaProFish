@@ -7,29 +7,10 @@ import {
   Sparkles, Thermometer, Waves, X
 } from 'lucide-react';
 
-const initialTanks = [
-  { id: 1, name: 'Aquário principal', volume: '120 L', temperature: '26 °C', ph: '7,0', fish: 18, status: 'Estável' },
-  { id: 2, name: 'Alevinos', volume: '40 L', temperature: '27 °C', ph: '7,2', fish: 32, status: 'Estável' },
-  { id: 3, name: 'Quarentena', volume: '20 L', temperature: '25 °C', ph: '7,0', fish: 2, status: 'Atenção' }
-];
-
-const initialFish = [
-  { id: 1, name: 'Guppy Moscow Blue', species: 'Poecilia reticulata', tank: 'Aquário principal', count: 8 },
-  { id: 2, name: 'Betta splendens', species: 'Betta', tank: 'Aquário principal', count: 1 },
-  { id: 3, name: 'Platy Sunset', species: 'Xiphophorus maculatus', tank: 'Aquário principal', count: 5 },
-  { id: 4, name: 'Alevinos de guppy', species: 'Poecilia reticulata', tank: 'Alevinos', count: 32 }
-];
-
-const initialTasks = [
-  { id: 1, title: 'Alimentar os peixes', detail: 'Rotina diária • manhã', done: false, icon: 'fish' },
-  { id: 2, title: 'Verificar temperatura', detail: 'Conferir aquários', done: false, icon: 'temp' },
-  { id: 3, title: 'TPA do aquário principal', detail: 'Troca parcial de água • 20%', done: true, icon: 'water' }
-];
-
-const initialPosts = [
-  { id: 1, author: 'Comunidade AquaProFish', time: 'Agora', text: 'Bem-vindo à comunidade! Em breve você poderá compartilhar fotos, experiências e dúvidas com outros aquaristas.', likes: 12, tag: 'Novidades' },
-  { id: 2, author: 'Dica de aquarismo', time: 'Hoje', text: 'Acompanhar os parâmetros da água regularmente ajuda a identificar problemas antes que eles afetem os peixes.', likes: 8, tag: 'Cuidados' }
-];
+const initialTanks = [];
+const initialFish = [];
+const initialTasks = [];
+const initialPosts = [];
 
 function readStore(key, fallback) {
   try {
@@ -42,10 +23,11 @@ function readStore(key, fallback) {
 
 function Dashboard({ user, onSignOut }) {
   const [section, setSection] = useState('Início');
-  const [tanks, setTanks] = useState(() => readStore('apf-tanks', initialTanks));
-  const [fishList, setFishList] = useState(() => readStore('apf-fish', initialFish));
-  const [tasks, setTasks] = useState(() => readStore('apf-tasks', initialTasks));
-  const [posts, setPosts] = useState(() => readStore('apf-posts', initialPosts));
+  const storagePrefix = `apf-user-${user?.id || 'guest'}-`;
+  const [tanks, setTanks] = useState(() => readStore(`${storagePrefix}tanks`, initialTanks));
+  const [fishList, setFishList] = useState(() => readStore(`${storagePrefix}fish`, initialFish));
+  const [tasks, setTasks] = useState(() => readStore(`${storagePrefix}tasks`, initialTasks));
+  const [posts, setPosts] = useState(() => readStore(`${storagePrefix}posts`, initialPosts));
   const [query, setQuery] = useState('');
   const [modal, setModal] = useState('');
   const [form, setForm] = useState({});
@@ -53,7 +35,7 @@ function Dashboard({ user, onSignOut }) {
 
   const save = (key, value, setter) => {
     setter(value);
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(storagePrefix + key, JSON.stringify(value));
   };
 
   const totalFish = useMemo(() => fishList.reduce((sum, item) => sum + Number(item.count || 0), 0), [fishList]);
@@ -73,25 +55,25 @@ function Dashboard({ user, onSignOut }) {
     e.preventDefault();
     if (!form.name?.trim()) return;
     const next = [...tanks, { id: Date.now(), name: form.name, volume: form.volume || 'Não informado', temperature: form.temperature || '—', ph: form.ph || '—', fish: 0, status: 'Novo' }];
-    save('apf-tanks', next, setTanks); setModal('');
+    save('tanks', next, setTanks); setModal('');
   }
 
   function submitFish(e) {
     e.preventDefault();
     if (!form.name?.trim()) return;
     const next = [...fishList, { id: Date.now(), name: form.name, species: form.species || 'Espécie não informada', tank: form.tank || 'Sem aquário', count: Math.max(1, Number(form.count || 1)) }];
-    save('apf-fish', next, setFishList); setModal('');
+    save('fish', next, setFishList); setModal('');
   }
 
   function submitPost(e) {
     e.preventDefault();
     if (!form.text?.trim()) return;
     const next = [{ id: Date.now(), author: 'Você', time: 'Agora', text: form.text, likes: 0, tag: 'Minha publicação' }, ...posts];
-    save('apf-posts', next, setPosts); setModal('');
+    save('posts', next, setPosts); setModal('');
   }
 
   function toggleTask(id) {
-    save('apf-tasks', tasks.map(t => t.id === id ? { ...t, done: !t.done } : t), setTasks);
+    save('tasks', tasks.map(t => t.id === id ? { ...t, done: !t.done } : t), setTasks);
   }
 
   const title = section === 'Início' ? 'Seu mundo aquático em um só lugar' : section;
