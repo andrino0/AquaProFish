@@ -91,7 +91,7 @@ function Dashboard({ user, onSignOut }) {
           status: t.status || 'Novo'
         })));
         setFishList(dbFish.map(f => ({
-          id: f.id, name: f.name, species: f.species || 'Espécie não informada',
+          id: f.id, aquariumId: f.aquarium_id || '', name: f.name, species: f.species || 'Espécie não informada',
           tank: dbTanks.find(t => t.id === f.aquarium_id)?.name || 'Sem aquário',
           count: f.quantity || 1
         })));
@@ -153,7 +153,7 @@ function Dashboard({ user, onSignOut }) {
   }
 
   function editFish(fish) {
-    setForm({ id: fish.id, name: fish.name, species: fish.species === 'Espécie não informada' ? '' : fish.species, tank: fish.tank === 'Sem aquário' ? '' : fish.tank, count: String(fish.count ?? 0) });
+    setForm({ id: fish.id, aquariumId: fish.aquariumId || '', name: fish.name, species: fish.species === 'Espécie não informada' ? '' : fish.species, tank: fish.tank === 'Sem aquário' ? '' : fish.tank, count: String(fish.count ?? 0) });
     setModal('editFish');
   }
 
@@ -161,7 +161,7 @@ function Dashboard({ user, onSignOut }) {
     e.preventDefault();
     if (!form.name?.trim()) return;
     setSaveError('');
-    const selectedTank = tanks.find(t => t.name.toLowerCase() === String(form.tank || '').trim().toLowerCase());
+    const selectedTank = tanks.find(t => t.id === (form.aquariumId || form.tank));
     const quantity = Math.max(0, Math.floor(Number(form.count ?? 0)));
     if (!Number.isFinite(quantity) || quantity < 1) { setSaveError('Informe a quantidade de peixes (mínimo 1).'); return; }
     const values = { aquarium_id: selectedTank?.id || null, name: form.name.trim(), species: form.species || null, quantity };
@@ -169,17 +169,17 @@ function Dashboard({ user, onSignOut }) {
       const previousFish = fishList.find(f => f.id === form.id);
       const { data, error } = await supabase.from('fish').update(values).eq('id', form.id).eq('user_id', user.id).select().single();
       if (error) { setSaveError('Não foi possível atualizar o peixe: ' + error.message); return; }
-      const updatedFish = { id: data.id, name: data.name, species: data.species || 'Espécie não informada', tank: selectedTank?.name || 'Sem aquário', count: data.quantity };
+      const updatedFish = { id: data.id, aquariumId: data.aquarium_id || '', name: data.name, species: data.species || 'Espécie não informada', tank: selectedTank?.name || 'Sem aquário', count: data.quantity };
       setFishList(fishList.map(f => f.id === data.id ? updatedFish : f));
       setTanks(tanks.map(t => {
-        const before = previousFish?.tank === t.name ? Number(previousFish.count || 0) : 0;
+        const before = previousFish?.aquariumId === t.id ? Number(previousFish.count || 0) : 0;
         const after = selectedTank?.id === t.id ? quantity : 0;
         return before || after ? { ...t, fish: Math.max(0, t.fish - before + after) } : t;
       }));
     } else {
       const { data, error } = await supabase.from('fish').insert({ user_id: user.id, ...values }).select().single();
       if (error) { setSaveError('Não foi possível salvar o peixe: ' + error.message); return; }
-      setFishList([{ id: data.id, name: data.name, species: data.species || 'Espécie não informada', tank: selectedTank?.name || 'Sem aquário', count: data.quantity }, ...fishList]);
+      setFishList([{ id: data.id, aquariumId: data.aquarium_id || '', name: data.name, species: data.species || 'Espécie não informada', tank: selectedTank?.name || 'Sem aquário', count: data.quantity }, ...fishList]);
       if (selectedTank) setTanks(tanks.map(t => t.id === selectedTank.id ? { ...t, fish: t.fish + quantity } : t));
     }
     setModal('');
@@ -297,7 +297,7 @@ function Dashboard({ user, onSignOut }) {
 
       {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' ? submitTask : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
         {(modal === 'tank' || modal === 'editTank') && <><Field label="Nome do aquário *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Aquário da sala"/><div className="form-two"><Field label="Volume" value={form.volume || ''} onChange={v=>setForm({...form,volume:v})} placeholder="Ex.: 100 L"/><Field label="Temperatura" value={form.temperature || ''} onChange={v=>setForm({...form,temperature:v})} placeholder="Ex.: 26 °C"/></div><Field label="pH atual" value={form.ph || ''} onChange={v=>setForm({...form,ph:v})} placeholder="Ex.: 7,0"/></>}
-        {(modal === 'fish' || modal === 'editFish') && <><Field label="Nome / variedade *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Guppy Full Red"/><Field label="Espécie" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Poecilia reticulata"/><div className="form-two"><Field label="Aquário" value={form.tank || ''} onChange={v=>setForm({...form,tank:v})} placeholder="Nome do aquário"/><Field label="Quantidade" value={form.count ?? '0'} onChange={v=>setForm({...form,count:v})} placeholder="0" type="number"/></div></>}
+        {(modal === 'fish' || modal === 'editFish') && <><Field label="Nome / variedade *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Guppy Full Red"/><Field label="Espécie" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Poecilia reticulata"/><div className="form-two"><label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(t=><option key={t.id} value={t.id}>{t.name} ({t.volume})</option>)}</select></label><Field label="Quantidade" value={form.count ?? '0'} onChange={v=>setForm({...form,count:v})} placeholder="0" type="number"/></div></>}
         {modal === 'task' && <><Field label="Nome da tarefa *" value={form.title || ''} onChange={v=>setForm({...form,title:v})} placeholder="Ex.: Alimentar os peixes"/><Field label="Detalhes" value={form.detail || ''} onChange={v=>setForm({...form,detail:v})} placeholder="Ex.: Pela manhã, pequena quantidade"/></>}
         {modal === 'post' && <Field label="O que você gostaria de compartilhar?" value={form.text || ''} onChange={v=>setForm({...form,text:v})} placeholder="Conte uma experiência ou faça uma pergunta..." area/>}
         <div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>setModal('')}>Cancelar</button><button type="submit" className="primary-button"><Plus size={17}/> Salvar</button></div>
