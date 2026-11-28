@@ -315,3 +315,44 @@
 .dose-result strong { font-size:25px; }
 @media(max-width:760px) { .calculator-grid { grid-template-columns:1fr; } }
 @media(max-width:430px) { .form-three { gap:6px; } .form-three .field span { font-size:10px; } .calculator-card { padding:14px; } }
+
+/* AquaProFish 2.0.0 — saúde, equipamentos, despesas e diário de fotos */
+.heading-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.health-layout,.equipment-expenses-layout{display:grid;gap:20px}
+.health-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.health-record-list,.expense-list{display:grid;gap:12px}
+.health-record-card,.expense-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:16px;border:1px solid #1c3a50;border-radius:15px;background:rgba(9,28,44,.58)}
+.health-record-main{min-width:0;flex:1}
+.health-record-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px}
+.health-record-title strong,.expense-row strong{color:#eff8fd}
+.health-record-main>small,.expense-row small{display:block;color:#8ca8bb;font-size:12px;margin:5px 0 10px}
+.health-record-main p,.expense-row p{color:#b9cbd7;font-size:13px;line-height:1.5;margin:7px 0}
+.equipment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.equipment-card{padding:17px;border:1px solid #1c3a50;border-radius:16px;background:rgba(9,28,44,.58);min-width:0}
+.equipment-card-head{display:flex;justify-content:space-between;align-items:center}
+.equipment-card h3{font:700 17px Outfit,sans-serif;color:#f0f8fc;margin:14px 0 5px}
+.equipment-card p{color:#b8cbd8;font-size:13px;margin:5px 0}
+.equipment-card>small{display:block;color:#87a7bd;font-size:12px;margin-top:4px}
+.equipment-maintenance{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:15px 0 8px;color:#b9cedb;font-size:12px;flex-wrap:wrap}
+.maintenance-button{margin-top:12px;width:100%;justify-content:center}
+.equipment-notes{padding-top:8px;border-top:1px solid #1a3549}
+.expense-row{align-items:center}
+.expense-row>div{flex:1;min-width:0}
+.expense-amount{white-space:nowrap;color:#69d7b0!important;font:700 15px Outfit,sans-serif}
+.expense-total{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding:15px 17px;border-radius:13px;background:#102b3d;color:#b8cfdd}
+.expense-total strong{font:800 20px Outfit,sans-serif;color:#65d9b3}
+.photo-journal-layout{display:grid;gap:16px}
+.photo-journal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.photo-journal-card{overflow:hidden;border:1px solid #1c3a50;border-radius:15px;background:#0a2031;min-width:0}
+.photo-journal-card>img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#071522}
+.photo-journal-copy{padding:12px;display:grid;gap:7px}
+.photo-journal-copy strong{color:#edf7fc;font-size:14px}
+.photo-journal-copy small{color:#8eacbf;font-size:11px;line-height:1.4}
+.photo-journal-copy .danger-icon-button{justify-self:start;display:flex;align-items:center;gap:6px;padding:5px 8px}
+.photo-unavailable{aspect-ratio:4/3;display:grid;place-items:center;text-align:center;padding:20px;color:#92aebe;font-size:12px;background:#0b1e2c}
+.post-image{display:block;width:100%;max-height:430px;object-fit:contain;border-radius:13px;background:#06131e;margin:12px 0 5px}
+.modal input[type=file],.field input[type=file]{width:100%;color:#b8cbd8;border:1px dashed #31566f;border-radius:10px;padding:12px;background:#0a2030}
+.modal input[type=file]::file-selector-button{border:0;border-radius:7px;padding:8px 11px;margin-right:10px;background:#174e68;color:#f4fbff;font-weight:700}
+.field-hint{display:block;color:#8daabd;font-size:12px;line-height:1.45;margin:-3px 0 8px}
+@media(max-width:900px){.photo-journal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.health-summary-grid,.equipment-grid,.photo-journal-grid{grid-template-columns:1fr}.heading-actions{width:100%}.heading-actions>*{flex:1;justify-content:center}.health-record-card,.expense-row{padding:12px;gap:9px}.expense-amount{font-size:13px}.equipment-card{padding:14px}.photo-journal-card>img{aspect-ratio:16/11}}
