@@ -145,3 +145,14 @@
 .species-disclaimer{margin:16px 0;color:#7999ac;font-size:10px;line-height:1.6}
 .species-back-button{width:100%;justify-content:center}
 @media(max-width:560px){.species-thumb,.species-fallback{width:64px;height:64px;flex-basis:64px}.species-detail-image{height:170px}.species-detail-content{padding:17px}.species-facts-grid{grid-template-columns:1fr 1fr}.species-detail-sections{grid-template-columns:1fr}.species-detail-content h2{font-size:23px}}
+
+
+/* Aviso de atualização do aplicativo */
+.app-update-bubble{display:flex;align-items:center;gap:13px;margin:0 0 18px;padding:14px 16px;border:1px solid #287e9a;border-radius:13px;background:linear-gradient(110deg,#10374a,#10283c);box-shadow:0 8px 28px #0003}
+.app-update-icon{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:50%;background:#1a6077;color:#8ceaff}
+.app-update-copy{display:grid;gap:4px;flex:1;min-width:0}
+.app-update-copy strong{color:#e8fbff;font-size:14px}
+.app-update-copy span{color:#a9c8d7;font-size:11px;line-height:1.5}
+.app-update-action{flex:0 0 auto;padding:10px 13px;border-radius:8px;background:#42c5df;color:#06202c;font-size:11px;font-weight:850;text-decoration:none;white-space:nowrap}
+.app-update-action:hover{background:#76def0}
+@media(max-width:560px){.app-update-bubble{align-items:flex-start;flex-wrap:wrap}.app-update-copy{flex-basis:calc(100% - 58px)}.app-update-action{margin-left:55px}}
