@@ -24,7 +24,7 @@ jobs:
         with:
           ref: main
 
-      - name: Validar e instalar as novas imagens
+      - name: Baixar e validar as imagens recebidas
         shell: bash
         run: |
           set -euo pipefail
@@ -35,31 +35,47 @@ jobs:
 
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          const payload = JSON.parse(fs.readFileSync('.github/image-upload/trigger.json', 'utf8'));
           const dir = '.github/image-upload';
-          const readParts = prefix => fs.readdirSync(dir)
-            .filter(name => name.startsWith(prefix + '-') && name.endsWith('.part'))
-            .sort()
-            .map(name => fs.readFileSync(dir + '/' + name, 'utf8').trim())
-            .join('');
-          const guppy = Buffer.from(readParts('guppy'), 'base64');
-          const betta = Buffer.from(readParts('betta'), 'base64');
-          const isWebp = b => b.length > 16 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP';
-          if (!isWebp(guppy) || !isWebp(betta)) throw new Error('Uma das imagens não é um WebP válido.');
-          fs.writeFileSync('public/guppy-g2-ai-small.webp', guppy);
-          fs.writeFileSync('public/betta-b3-ai-small.webp', betta);
+          function download(url, file, label) {
+            if (typeof url !== 'string' || !url.startsWith('https://d2jqrm6oza8nb6.cloudfront.net/')) {
+              throw new Error('Endereço inválido para a imagem ' + label);
+            }
+            console.log('::add-mask::' + url);
+            execFileSync('curl', ['--fail', '--location', '--silent', '--show-error', url, '--output', file], { stdio: 'inherit' });
+          }
+          download(payload.guppy_url, dir + '/guppy-source', 'Guppy');
+          download(payload.betta_url, dir + '/betta-source', 'Betta');
+
+          function install(source, stem) {
+            const b = fs.readFileSync(source);
+            let ext;
+            if (b.length > 16 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) ext = 'jpg';
+            else if (b.length > 16 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') ext = 'webp';
+            else throw new Error('Formato de imagem não reconhecido: ' + stem);
+            const name = stem + '.' + ext;
+            fs.writeFileSync('public/' + name, b);
+            return name;
+          }
+
+          const guppyName = install(dir + '/guppy-source', 'guppy-g2-ai-small');
+          const bettaName = install(dir + '/betta-source', 'betta-b3-ai-small');
 
           const appPath = 'src/App.jsx';
           let app = fs.readFileSync(appPath, 'utf8');
-          if (!app.includes('guppy-g2-ai-small.jpg') || !app.includes('betta-b3-ai-small.jpg')) {
-            throw new Error('Os endereços atuais das imagens não foram encontrados; nenhuma referência foi alterada.');
+          const oldGuppy = 'guppy-g2-ai-small.jpg';
+          const oldBetta = 'betta-b3-ai-small.jpg';
+          if (!app.includes(oldGuppy) || !app.includes(oldBetta)) {
+            throw new Error('Não encontrei os dois endereços antigos no guia; nenhuma referência foi alterada.');
           }
-          app = app.replaceAll('guppy-g2-ai-small.jpg', 'guppy-g2-ai-small.webp');
-          app = app.replaceAll('betta-b3-ai-small.jpg', 'betta-b3-ai-small.webp');
+          app = app.replaceAll(oldGuppy, guppyName);
+          app = app.replaceAll(oldBetta, bettaName);
           fs.writeFileSync(appPath, app);
-          console.log('As duas imagens WebP foram validadas e vinculadas ao guia.');
+          console.log('Imagens instaladas: ' + guppyName + ' e ' + bettaName);
           NODE
 
-      - name: Registrar a atualização e publicar site e APK
+      - name: Registrar a atualização e iniciar as publicações
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
