@@ -312,7 +312,7 @@ function Dashboard({ user, onSignOut }) {
         setExpenses((expenseResult.data || []).map(item => ({ ...item })));
         const journalRows = photoJournalResult.data || [];
         const journalWithUrls = await Promise.all(journalRows.map(async item => {
-          const { data: signed, error: signedError } = await supabase.storage.from('aquaprofish-journal').createSignedUrl(item.image_path, 3600);
+          const { data: signed, error: signedError } = await supabase.storage.from('aquaprofish-journal').createSignedUrl(item.image_path, 86400);
           return { ...item, signedUrl: signedError ? '' : (signed?.signedUrl || '') };
         }));
         setPhotoEntries(journalWithUrls);
@@ -517,7 +517,7 @@ function Dashboard({ user, onSignOut }) {
     setEquipment(current => [data, ...current]); setModal('');
   }
   async function markEquipmentMaintained(item) {
-    const today = new Date().toISOString().slice(0,10);
+    const today = localDateISO();
     const { data, error } = await supabase.from('equipment').update({ last_maintenance_at: today }).eq('id', item.id).eq('user_id', user.id).select().single();
     if (error) { setSaveError('Não foi possível registrar a manutenção: ' + error.message); return; }
     setEquipment(current => current.map(value => value.id === item.id ? data : value));
@@ -562,10 +562,10 @@ function Dashboard({ user, onSignOut }) {
     if (uploadError) { setSaveError('Não foi possível enviar a foto: ' + uploadError.message); setPhotoUploadBusy(false); return; }
     const { data, error } = await supabase.from('photo_journal').insert({
       user_id: user.id, aquarium_id: form.aquariumId || null, image_path: path,
-      caption: form.caption?.trim() || null, taken_at: form.takenAt || new Date().toISOString().slice(0,10)
+      caption: form.caption?.trim() || null, taken_at: form.takenAt || localDateISO()
     }).select().single();
     if (error) { await supabase.storage.from('aquaprofish-journal').remove([path]); setSaveError('A foto foi enviada, mas não foi possível salvar o registro: ' + error.message); setPhotoUploadBusy(false); return; }
-    const { data: signed } = await supabase.storage.from('aquaprofish-journal').createSignedUrl(path, 3600);
+    const { data: signed } = await supabase.storage.from('aquaprofish-journal').createSignedUrl(path, 86400);
     setPhotoEntries(current => [{ ...data, signedUrl: signed?.signedUrl || '' }, ...current]);
     setPhotoUploadBusy(false); setModal('');
   }
@@ -1017,8 +1017,8 @@ function Dashboard({ user, onSignOut }) {
             {section === 'Meus peixes' && <button className="primary-button" onClick={() => openModal('fish')}><Plus size={18}/> Cadastrar peixe</button>}
             {section === 'Rotina' && <button className="primary-button" onClick={() => openModal('task')}><Plus size={18}/> Nova tarefa</button>}
             {section === 'Saúde dos peixes' && <button className="primary-button" onClick={() => { setForm({ recordedAt: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16), status: 'observando' }); setModal('healthRecord'); }}><Plus size={18}/> Registrar ocorrência</button>}
-            {section === 'Equipamentos e gastos' && <div className="heading-actions"><button className="secondary-button" onClick={() => { setForm({ spentAt: new Date().toISOString().slice(0,10), category: 'other' }); setModal('expense'); }}><Plus size={17}/> Lançar gasto</button><button className="primary-button" onClick={() => { setForm({ category: 'filter', maintenanceIntervalDays: '30' }); setModal('equipment'); }}><Plus size={18}/> Cadastrar equipamento</button></div>}
-            {section === 'Diário de fotos' && <button className="primary-button" onClick={() => { setForm({ takenAt: new Date().toISOString().slice(0,10) }); setModal('photoEntry'); }}><Plus size={18}/> Adicionar foto</button>}
+            {section === 'Equipamentos e gastos' && <div className="heading-actions"><button className="secondary-button" onClick={() => { setForm({ spentAt: localDateISO(), category: 'other' }); setModal('expense'); }}><Plus size={17}/> Lançar gasto</button><button className="primary-button" onClick={() => { setForm({ category: 'filter', maintenanceIntervalDays: '30' }); setModal('equipment'); }}><Plus size={18}/> Cadastrar equipamento</button></div>}
+            {section === 'Diário de fotos' && <button className="primary-button" onClick={() => { setForm({ takenAt: localDateISO() }); setModal('photoEntry'); }}><Plus size={18}/> Adicionar foto</button>}
             {section === 'Reprodução e alevinos' && <button className="primary-button" onClick={() => { setForm({ birthDate: new Date().toISOString().slice(0,10), fryCount: '0' }); setModal('brood'); }}><Plus size={18}/> Registrar cria</button>}
             {section === 'Comunidade' && <button className="primary-button" onClick={() => openModal('post')}><Plus size={18}/> Publicar</button>}
           </div>
@@ -1175,14 +1175,14 @@ function Dashboard({ user, onSignOut }) {
           {section === 'Equipamentos e gastos' && <section className="equipment-expenses-layout">
             <div className="routine-summary-grid">
               <article className="panel routine-summary-card"><span>⚙️</span><div><small>Equipamentos</small><strong>{equipment.length}</strong></div></article>
-              <article className="panel routine-summary-card"><span>🛠️</span><div><small>Manutenção vencida</small><strong>{equipment.filter(item => { const due = nextMaintenanceDate(item); return due && due < new Date().toISOString().slice(0,10); }).length}</strong></div></article>
-              <article className="panel routine-summary-card"><span>💰</span><div><small>Gastos neste mês</small><strong>{formatCurrency(expenses.filter(item => String(item.spent_at).slice(0,7) === new Date().toISOString().slice(0,7)).reduce((sum,item) => sum + Number(item.amount || 0), 0))}</strong></div></article>
+              <article className="panel routine-summary-card"><span>🛠️</span><div><small>Manutenção vencida</small><strong>{equipment.filter(item => { const due = nextMaintenanceDate(item); return due && due < localDateISO(); }).length}</strong></div></article>
+              <article className="panel routine-summary-card"><span>💰</span><div><small>Gastos neste mês</small><strong>{formatCurrency(expenses.filter(item => String(item.spent_at).slice(0,7) === localDateISO().slice(0,7)).reduce((sum,item) => sum + Number(item.amount || 0), 0))}</strong></div></article>
             </div>
             <section className="panel page-panel">
               <div className="panel-heading"><div><h3>Meus equipamentos</h3><p>Controle filtros, aquecedores, iluminação e manutenções</p></div><Wrench size={20}/></div>
               {equipment.length ? <div className="equipment-grid">{equipment.map(item => {
                 const due = nextMaintenanceDate(item);
-                const overdue = due && due < new Date().toISOString().slice(0,10);
+                const overdue = due && due < localDateISO();
                 const categoryLabel = ({filter:'Filtro',heater:'Aquecedor',lighting:'Iluminação',pump:'Bomba',uv:'Lâmpada UV',co2:'CO₂',other:'Outro'})[item.category] || 'Outro';
                 return <article className="equipment-card" key={item.id}><div className="equipment-card-head"><span className="tag">{categoryLabel}</span><button type="button" className="danger-icon-button" onClick={() => deleteEquipment(item)} aria-label="Excluir equipamento"><Trash2 size={14}/></button></div>
                   <h3>{item.name}</h3><p>{item.brand_model || 'Marca/modelo não informado'}</p><small>{tanks.find(tank => tank.id === item.aquarium_id)?.name || 'Sem aquário definido'}</small>
@@ -1327,7 +1327,7 @@ function Dashboard({ user, onSignOut }) {
         </>}
         {modal === 'expense' && <>
           <Field label="Descrição *" value={form.description || ''} onChange={v=>setForm({...form,description:v})} placeholder="Ex.: Ração para os guppys"/>
-          <div className="form-two"><Field label="Valor em reais *" type="number" value={form.amount || ''} onChange={v=>setForm({...form,amount:v})} placeholder="Ex.: 25,90"/><Field label="Data *" type="date" value={form.spentAt || new Date().toISOString().slice(0,10)} onChange={v=>setForm({...form,spentAt:v})}/></div>
+          <div className="form-two"><Field label="Valor em reais *" type="number" value={form.amount || ''} onChange={v=>setForm({...form,amount:v})} placeholder="Ex.: 25,90"/><Field label="Data *" type="date" value={form.spentAt || localDateISO()} onChange={v=>setForm({...form,spentAt:v})}/></div>
           <label className="field"><span>Categoria</span><select value={form.category || 'other'} onChange={e=>setForm({...form,category:e.target.value})}><option value="equipment">Equipamentos</option><option value="food">Alimentação</option><option value="medicine">Medicamentos</option><option value="fish">Peixes e animais</option><option value="maintenance">Manutenção</option><option value="other">Outros</option></select></label>
           <label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Despesa geral</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
           <label className="field"><span>Equipamento relacionado (opcional)</span><select value={form.equipmentId || ''} onChange={e=>setForm({...form,equipmentId:e.target.value})}><option value="">Não se aplica</option>{equipment.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -1336,7 +1336,7 @@ function Dashboard({ user, onSignOut }) {
         {modal === 'photoEntry' && <>
           <label className="field"><span>Foto * (JPG, PNG ou WebP; máximo 10 MB)</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setForm({...form,imageFile:e.target.files?.[0] || null})}/></label>
           <label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
-          <div className="form-two"><Field label="Data da foto" type="date" value={form.takenAt || new Date().toISOString().slice(0,10)} onChange={v=>setForm({...form,takenAt:v})}/><Field label="Legenda" value={form.caption || ''} onChange={v=>setForm({...form,caption:v})} placeholder="Ex.: crescimento após 30 dias"/></div>
+          <div className="form-two"><Field label="Data da foto" type="date" value={form.takenAt || localDateISO()} onChange={v=>setForm({...form,takenAt:v})}/><Field label="Legenda" value={form.caption || ''} onChange={v=>setForm({...form,caption:v})} placeholder="Ex.: crescimento após 30 dias"/></div>
           <p className="field-hint">A imagem ficará privada, vinculada à sua conta AquaProFish.</p>
         </>}
         {modal === 'brood' && <>
@@ -1385,6 +1385,9 @@ function calcDose(values) {
   return volume>0 && rate>=0 && rateVolume>0 && [volume,rate,rateVolume].every(Number.isFinite) ? volume*rate/rateVolume : 0;
 }
 
+function localDateISO() {
+  return new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,10);
+}
 function formatCurrency(value) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
 }
