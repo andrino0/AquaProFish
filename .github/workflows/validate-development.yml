@@ -26,5 +26,7 @@ jobs:
           node-version: 20
       - name: Instalar dependências
         run: npm install
+      - name: Definir versão de desenvolvimento
+        run: echo "VITE_APP_VERSION=2.0.0-dev" >> "$GITHUB_ENV"
       - name: Validar build web
         run: npm run build
