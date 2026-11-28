@@ -744,7 +744,7 @@ function Dashboard({ user, onSignOut }) {
       const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
       const date = new Date().toISOString().slice(0, 10);
       downloadFile(csv, 'aquaprofish-dados-' + date + '.csv', 'text/csv;charset=utf-8');
-      setSettingsMessage('Planilha CSV criada com aquários, peixes, tarefas, publicações e medições da água.');
+      setSettingsMessage('Planilha CSV criada com aquários, peixes, tarefas, publicações, medições da água, crias e crescimento dos alevinos.');
     } catch (error) {
       console.error('Erro ao exportar CSV:', error);
       setSettingsMessage('Não foi possível criar a planilha. Verifique a conexão e tente novamente.');
@@ -859,7 +859,7 @@ function Dashboard({ user, onSignOut }) {
             {section === 'Aquários' && <button className="primary-button" onClick={() => openModal('tank')}><Plus size={18}/> Novo aquário</button>}
             {section === 'Meus peixes' && <button className="primary-button" onClick={() => openModal('fish')}><Plus size={18}/> Cadastrar peixe</button>}
             {section === 'Rotina' && <button className="primary-button" onClick={() => openModal('task')}><Plus size={18}/> Nova tarefa</button>}
-            {section === 'Reprodução e alevinos' && <button className="primary-button" onClick={() => openModal('brood')}><Plus size={18}/> Registrar cria</button>}
+            {section === 'Reprodução e alevinos' && <button className="primary-button" onClick={() => { setForm({ birthDate: new Date().toISOString().slice(0,10), fryCount: '0' }); setModal('brood'); }}><Plus size={18}/> Registrar cria</button>}
             {section === 'Comunidade' && <button className="primary-button" onClick={() => openModal('post')}><Plus size={18}/> Publicar</button>}
           </div>
 
