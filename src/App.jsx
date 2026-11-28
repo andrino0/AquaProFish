@@ -8,6 +8,18 @@ import {
   Sparkles, Thermometer, Waves, X, Copy
 } from 'lucide-react';
 
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.145';
+const APK_DOWNLOAD_URL = 'https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk';
+function isVersionNewer(latest, installed) {
+  const a = String(latest).split('.').map(Number);
+  const b = String(installed).split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] || 0) > (b[i] || 0)) return true;
+    if ((a[i] || 0) < (b[i] || 0)) return false;
+  }
+  return false;
+}
+
 const initialTanks = [];
 const initialFish = [];
 const initialTasks = [];
@@ -133,6 +145,9 @@ function Dashboard({ user, onSignOut }) {
   const [pixCopied, setPixCopied] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState('');
+  const [availableVersion, setAvailableVersion] = useState('');
+  const [updateCheckMessage, setUpdateCheckMessage] = useState('');
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const confirmResolver = useRef(null);
 
@@ -149,6 +164,35 @@ function Dashboard({ user, onSignOut }) {
     setConfirmDialog(null);
     if (resolve) resolve(confirmed);
   }
+
+  useEffect(() => {
+    let active = true;
+    async function checkForUpdates() {
+      setCheckingUpdate(true);
+      setUpdateCheckMessage('');
+      try {
+        const response = await fetch('https://api.github.com/repos/andrino0/AquaProFish/releases/tags/apk-latest', {
+          headers: { Accept: 'application/vnd.github+json' },
+          cache: 'no-store'
+        });
+        if (!response.ok) throw new Error('Não foi possível consultar a versão mais recente.');
+        const release = await response.json();
+        const versionText = String(release.body || '').match(/Versão: ([0-9.]+)/i);
+        const latest = versionText?.[1] || '';
+        const newer = latest && isVersionNewer(latest, APP_VERSION);
+        if (active) {
+          setAvailableVersion(newer ? latest : '');
+          setUpdateCheckMessage(newer ? '' : 'Você já está usando a versão mais recente.');
+        }
+      } catch (error) {
+        if (active) setUpdateCheckMessage('Não foi possível verificar agora. Tente novamente mais tarde.');
+      } finally {
+        if (active) setCheckingUpdate(false);
+      }
+    }
+    checkForUpdates();
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -737,7 +781,7 @@ function Dashboard({ user, onSignOut }) {
             </article>
             <article className="panel settings-card">
               <div className="panel-heading"><div><h3>Sobre o AquaProFish</h3><p>Gestão • Criação • Comunidade</p></div><Heart size={20}/></div>
-              <div className="settings-about"><span>Desenvolvedor</span><strong>Andrino Morales Botelho</strong><span>Versão do aplicativo</span><strong>1.0.145 • 2026</strong></div>
+              <div className="settings-about"><span>Desenvolvedor</span><strong>Andrino Morales Botelho</strong><span>Versão instalada</span><strong>{APP_VERSION} • 2026</strong></div>{updateCheckMessage && <p className="settings-message" role="status">{updateCheckMessage}</p>}{availableVersion && <p className="settings-message" role="status">Nova versão {availableVersion} disponível! <a href={APK_DOWNLOAD_URL} target="_blank" rel="noreferrer">Baixar agora</a></p>}
               <button type="button" className="auth-logout settings-signout" onClick={onSignOut}>Sair da minha conta</button>
             </article>
           </section>}
