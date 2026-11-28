@@ -5,7 +5,7 @@ import { supabase } from './lib/supabase.js';
 import {
   Activity, Bell, BookOpen, CalendarDays, Calculator, Check, ChevronRight, Download, Droplets, Egg,
   Fish, Heart, HeartPulse, Home, Menu, MessageCircle, Pencil, Plus, Search, Settings, Trash2,
-  Sparkles, Thermometer, Waves, X, Copy
+  Sparkles, Thermometer, Waves, X, Copy, Stethoscope, Wrench, Wallet, Camera
 } from 'lucide-react';
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.145';
@@ -150,6 +150,11 @@ function Dashboard({ user, onSignOut }) {
   const [doseCalc, setDoseCalc] = useState({ aquariumId: '', volume: '70', rate: '5', rateVolume: '100' });
   const [breedingBatches, setBreedingBatches] = useState([]);
   const [fryObservations, setFryObservations] = useState([]);
+  const [healthRecords, setHealthRecords] = useState([]);
+  const [equipment, setEquipment] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [photoEntries, setPhotoEntries] = useState([]);
+  const [photoUploadBusy, setPhotoUploadBusy] = useState(false);
   const [waterForm, setWaterForm] = useState({ aquariumId: '', testedAt: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16), temperature: '', ph: '', ammonia: '', nitrite: '', nitrate: '', notes: '' });
   const [posts, setPosts] = useState(initialPosts);
   const [dataLoading, setDataLoading] = useState(true);
@@ -248,7 +253,7 @@ function Dashboard({ user, onSignOut }) {
     let active = true;
     async function loadWorkspace() {
       setDataLoading(true);
-      const [tankResult, fishResult, taskResult, postResult, profileResult, likeResult, commentResult, waterResult, breedingResult, fryResult] = await Promise.all([
+      const [tankResult, fishResult, taskResult, postResult, profileResult, likeResult, commentResult, waterResult, breedingResult, fryResult, healthResult, equipmentResult, expenseResult, photoJournalResult] = await Promise.all([
         supabase.from('aquariums').select('*').order('created_at', { ascending: false }),
         supabase.from('fish').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
@@ -258,9 +263,13 @@ function Dashboard({ user, onSignOut }) {
         supabase.from('post_comments').select('*').order('created_at', { ascending: true }),
         supabase.from('water_tests').select('*').order('tested_at', { ascending: false }),
         supabase.from('breeding_batches').select('*').order('birth_date', { ascending: false }),
-        supabase.from('fry_observations').select('*').order('observed_at', { ascending: false })
+        supabase.from('fry_observations').select('*').order('observed_at', { ascending: false }),
+        supabase.from('health_records').select('*').order('recorded_at', { ascending: false }),
+        supabase.from('equipment').select('*').order('created_at', { ascending: false }),
+        supabase.from('expenses').select('*').order('spent_at', { ascending: false }),
+        supabase.from('photo_journal').select('*').order('taken_at', { ascending: false })
       ]);
-      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error || likeResult.error || commentResult.error || waterResult.error || breedingResult.error || fryResult.error;
+      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error || likeResult.error || commentResult.error || waterResult.error || breedingResult.error || fryResult.error || healthResult.error || equipmentResult.error || expenseResult.error || photoJournalResult.error;
       if (failure) {
         console.error('Erro ao carregar dados do AquaProFish:', failure);
         if (active) setSaveError('Não foi possível carregar todos os dados. Verifique sua conexão e tente atualizar.');
@@ -285,7 +294,7 @@ function Dashboard({ user, onSignOut }) {
         const comments = commentResult.data || [];
         setPosts((postResult.data || []).map(p => ({
           id: p.id, userId: p.user_id, author: profiles.find(profile => profile.id === p.user_id)?.display_name || 'Aquarista',
-          time: new Date(p.created_at).toLocaleString('pt-BR'), text: p.content,
+          time: new Date(p.created_at).toLocaleString('pt-BR'), text: p.content, imageUrl: p.image_url || '',
           likes: likes.filter(like => like.post_id === p.id).length,
           likedByMe: likes.some(like => like.post_id === p.id && like.user_id === user.id),
           comments: comments.filter(comment => comment.post_id === p.id).map(comment => ({
@@ -298,6 +307,15 @@ function Dashboard({ user, onSignOut }) {
         setWaterTests((waterResult.data || []).map(test => ({ ...test })));
         setBreedingBatches((breedingResult.data || []).map(batch => ({ ...batch })));
         setFryObservations((fryResult.data || []).map(observation => ({ ...observation })));
+        setHealthRecords((healthResult.data || []).map(record => ({ ...record })));
+        setEquipment((equipmentResult.data || []).map(item => ({ ...item })));
+        setExpenses((expenseResult.data || []).map(item => ({ ...item })));
+        const journalRows = photoJournalResult.data || [];
+        const journalWithUrls = await Promise.all(journalRows.map(async item => {
+          const { data: signed, error: signedError } = await supabase.storage.from('aquaprofish-journal').createSignedUrl(item.image_path, 3600);
+          return { ...item, signedUrl: signedError ? '' : (signed?.signedUrl || '') };
+        }));
+        setPhotoEntries(journalWithUrls);
         setSaveError('');
       }
       if (active) setDataLoading(false);
@@ -321,6 +339,9 @@ function Dashboard({ user, onSignOut }) {
     { label: 'Meus peixes', icon: Fish },
     { label: 'Rotina', icon: CalendarDays },
     { label: 'Qualidade da água', icon: Droplets },
+    { label: 'Saúde dos peixes', icon: Stethoscope },
+    { label: 'Equipamentos e gastos', icon: Wrench },
+    { label: 'Diário de fotos', icon: Camera },
     { label: 'Reprodução e alevinos', icon: Egg },
     { label: 'Calculadoras', icon: Calculator },
     { label: 'Comunidade', icon: MessageCircle },
@@ -460,6 +481,103 @@ function Dashboard({ user, onSignOut }) {
     setWaterTests(current => current.filter(item => item.id !== test.id));
   }
 
+  async function submitHealthRecord(e) {
+    e.preventDefault();
+    if (!form.symptoms?.trim()) { setSaveError('Descreva os sintomas ou a alteração observada.'); return; }
+    setSaveError('');
+    const { data, error } = await supabase.from('health_records').insert({
+      user_id: user.id, aquarium_id: form.aquariumId || null,
+      recorded_at: form.recordedAt ? new Date(form.recordedAt).toISOString() : new Date().toISOString(),
+      fish_name: form.fishName?.trim() || null, symptoms: form.symptoms.trim(),
+      treatment: form.treatment?.trim() || null, medication: form.medication?.trim() || null,
+      status: form.status || 'observando', notes: form.notes?.trim() || null
+    }).select().single();
+    if (error) { setSaveError('Não foi possível salvar o registro de saúde: ' + error.message); return; }
+    setHealthRecords(current => [data, ...current]); setModal('');
+  }
+  async function deleteHealthRecord(record) {
+    if (!(await confirmAction('Excluir este registro de saúde?'))) return;
+    const { error } = await supabase.from('health_records').delete().eq('id', record.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir o registro: ' + error.message); return; }
+    setHealthRecords(current => current.filter(item => item.id !== record.id));
+  }
+  async function submitEquipment(e) {
+    e.preventDefault();
+    if (!form.name?.trim()) { setSaveError('Informe o nome do equipamento.'); return; }
+    const interval = String(form.maintenanceIntervalDays ?? '').trim() === '' ? null : Number(form.maintenanceIntervalDays);
+    if (interval !== null && (!Number.isInteger(interval) || interval < 1 || interval > 3650)) { setSaveError('O intervalo de manutenção deve estar entre 1 e 3650 dias.'); return; }
+    setSaveError('');
+    const { data, error } = await supabase.from('equipment').insert({
+      user_id: user.id, aquarium_id: form.aquariumId || null, name: form.name.trim(),
+      category: form.category || 'other', brand_model: form.brandModel?.trim() || null,
+      installed_at: form.installedAt || null, maintenance_interval_days: interval,
+      last_maintenance_at: form.lastMaintenanceAt || null, notes: form.notes?.trim() || null
+    }).select().single();
+    if (error) { setSaveError('Não foi possível cadastrar o equipamento: ' + error.message); return; }
+    setEquipment(current => [data, ...current]); setModal('');
+  }
+  async function markEquipmentMaintained(item) {
+    const today = new Date().toISOString().slice(0,10);
+    const { data, error } = await supabase.from('equipment').update({ last_maintenance_at: today }).eq('id', item.id).eq('user_id', user.id).select().single();
+    if (error) { setSaveError('Não foi possível registrar a manutenção: ' + error.message); return; }
+    setEquipment(current => current.map(value => value.id === item.id ? data : value));
+  }
+  async function deleteEquipment(item) {
+    if (!(await confirmAction('Excluir o equipamento "' + item.name + '"? Despesas relacionadas continuarão salvas.'))) return;
+    const { error } = await supabase.from('equipment').delete().eq('id', item.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir o equipamento: ' + error.message); return; }
+    setEquipment(current => current.filter(value => value.id !== item.id));
+    setExpenses(current => current.map(value => value.equipment_id === item.id ? { ...value, equipment_id: null } : value));
+  }
+  async function submitExpense(e) {
+    e.preventDefault();
+    const amount = Number(String(form.amount ?? '').trim().replace(',', '.'));
+    if (!form.description?.trim() || !Number.isFinite(amount) || amount <= 0 || !form.spentAt) { setSaveError('Informe a descrição, a data e um valor maior que zero.'); return; }
+    setSaveError('');
+    const { data, error } = await supabase.from('expenses').insert({
+      user_id: user.id, aquarium_id: form.aquariumId || null,
+      equipment_id: form.equipmentId || null, description: form.description.trim(),
+      category: form.category || 'other', amount, spent_at: form.spentAt,
+      notes: form.notes?.trim() || null
+    }).select().single();
+    if (error) { setSaveError('Não foi possível salvar a despesa: ' + error.message); return; }
+    setExpenses(current => [data, ...current]); setModal('');
+  }
+  async function deleteExpense(item) {
+    if (!(await confirmAction('Excluir esta despesa?'))) return;
+    const { error } = await supabase.from('expenses').delete().eq('id', item.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir a despesa: ' + error.message); return; }
+    setExpenses(current => current.filter(value => value.id !== item.id));
+  }
+  async function submitPhotoEntry(e) {
+    e.preventDefault();
+    const file = form.imageFile;
+    if (!file) { setSaveError('Escolha uma foto para o diário.'); return; }
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) { setSaveError('Use uma imagem JPG, PNG ou WebP de até 10 MB.'); return; }
+    setPhotoUploadBusy(true); setSaveError('');
+    const extension = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
+    const unique = globalThis.crypto?.randomUUID?.() || (Date.now() + '-' + Math.random().toString(36).slice(2));
+    const path = user.id + '/' + unique + '.' + extension;
+    const { error: uploadError } = await supabase.storage.from('aquaprofish-journal').upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false });
+    if (uploadError) { setSaveError('Não foi possível enviar a foto: ' + uploadError.message); setPhotoUploadBusy(false); return; }
+    const { data, error } = await supabase.from('photo_journal').insert({
+      user_id: user.id, aquarium_id: form.aquariumId || null, image_path: path,
+      caption: form.caption?.trim() || null, taken_at: form.takenAt || new Date().toISOString().slice(0,10)
+    }).select().single();
+    if (error) { await supabase.storage.from('aquaprofish-journal').remove([path]); setSaveError('A foto foi enviada, mas não foi possível salvar o registro: ' + error.message); setPhotoUploadBusy(false); return; }
+    const { data: signed } = await supabase.storage.from('aquaprofish-journal').createSignedUrl(path, 3600);
+    setPhotoEntries(current => [{ ...data, signedUrl: signed?.signedUrl || '' }, ...current]);
+    setPhotoUploadBusy(false); setModal('');
+  }
+  async function deletePhotoEntry(photo) {
+    if (!(await confirmAction('Excluir esta foto do diário? Esta ação também remove o arquivo privado.'))) return;
+    const { error } = await supabase.from('photo_journal').delete().eq('id', photo.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir o registro da foto: ' + error.message); return; }
+    const { error: storageError } = await supabase.storage.from('aquaprofish-journal').remove([photo.image_path]);
+    if (storageError) console.warn('O registro foi excluído, mas o arquivo poderá precisar de limpeza:', storageError);
+    setPhotoEntries(current => current.filter(item => item.id !== photo.id));
+  }
+
   async function submitBrood(e) {
     e.preventDefault();
     if (!form.species?.trim() || !form.birthDate || !Number.isInteger(Number(form.fryCount)) || Number(form.fryCount) < 0) {
@@ -517,13 +635,24 @@ function Dashboard({ user, onSignOut }) {
 
   async function submitPost(e) {
     e.preventDefault();
-    if (!form.text?.trim()) return;
+    const file = form.imageFile;
+    if (!form.text?.trim() && !file) { setSaveError('Escreva uma mensagem ou escolha uma foto.'); return; }
+    if (file && (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024)) { setSaveError('Use uma imagem JPG, PNG ou WebP de até 8 MB.'); return; }
     setSaveError('');
+    let imageUrl = '', uploadedPath = '';
+    if (file) {
+      const extension = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
+      const unique = globalThis.crypto?.randomUUID?.() || (Date.now() + '-' + Math.random().toString(36).slice(2));
+      uploadedPath = user.id + '/' + unique + '.' + extension;
+      const { error: uploadError } = await supabase.storage.from('aquaprofish-community').upload(uploadedPath, file, { contentType: file.type, cacheControl: '3600', upsert: false });
+      if (uploadError) { setSaveError('Não foi possível enviar a foto: ' + uploadError.message); return; }
+      imageUrl = supabase.storage.from('aquaprofish-community').getPublicUrl(uploadedPath).data.publicUrl;
+    }
     const { data, error } = await supabase.from('posts').insert({
-      user_id: user.id, content: form.text.trim()
+      user_id: user.id, content: form.text?.trim() || 'Foto compartilhada', image_url: imageUrl || null
     }).select().single();
-    if (error) { setSaveError('Não foi possível publicar: ' + error.message); return; }
-    setPosts([{ id: data.id, userId: user.id, author: user.user_metadata?.display_name || user.user_metadata?.name || 'Você', time: 'Agora', text: data.content, likes: 0, likedByMe: false, comments: [], tag: 'Comunidade' }, ...posts]);
+    if (error) { if (uploadedPath) await supabase.storage.from('aquaprofish-community').remove([uploadedPath]); setSaveError('Não foi possível publicar: ' + error.message); return; }
+    setPosts(current => [{ id: data.id, userId: user.id, author: user.user_metadata?.display_name || user.user_metadata?.name || 'Você', time: 'Agora', text: data.content, imageUrl: data.image_url || '', likes: 0, likedByMe: false, comments: [], tag: 'Comunidade' }, ...current]);
     setModal('');
   }
 
@@ -651,6 +780,10 @@ function Dashboard({ user, onSignOut }) {
     const { error } = await supabase.from('posts').delete().eq('id', post.id).eq('user_id', user.id);
     if (error) { setSaveError('Não foi possível excluir a publicação: ' + error.message); return; }
     setPosts(current => current.filter(item => item.id !== post.id));
+    if (post.imageUrl) {
+      const marker = '/aquaprofish-community/'; const markerIndex = post.imageUrl.indexOf(marker);
+      if (markerIndex >= 0) { const objectPath = decodeURIComponent(post.imageUrl.slice(markerIndex + marker.length)); const { error: mediaError } = await supabase.storage.from('aquaprofish-community').remove([objectPath]); if (mediaError) console.warn('Publicação removida, mas a foto pode precisar de limpeza:', mediaError); }
+    }
   }
 
   async function deleteComment(postId, comment) {
@@ -677,7 +810,7 @@ function Dashboard({ user, onSignOut }) {
     setBackupBusy(true);
     setSettingsMessage('');
     try {
-      const [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows] = await Promise.all([
+      const [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows] = await Promise.all([
         supabase.from('aquariums').select('*').eq('user_id', user.id),
         supabase.from('fish').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id),
@@ -686,9 +819,13 @@ function Dashboard({ user, onSignOut }) {
         supabase.from('post_comments').select('*').eq('user_id', user.id),
         supabase.from('water_tests').select('*').eq('user_id', user.id),
         supabase.from('breeding_batches').select('*').eq('user_id', user.id),
-        supabase.from('fry_observations').select('*').eq('user_id', user.id)
+        supabase.from('fry_observations').select('*').eq('user_id', user.id),
+        supabase.from('health_records').select('*').eq('user_id', user.id),
+        supabase.from('equipment').select('*').eq('user_id', user.id),
+        supabase.from('expenses').select('*').eq('user_id', user.id),
+        supabase.from('photo_journal').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows].find(result => result.error);
       if (failed) throw failed.error;
       const backup = {
         app: 'AquaProFish',
@@ -705,7 +842,7 @@ function Dashboard({ user, onSignOut }) {
           post_comments: comments.data || [],
           water_tests: waterTestRows.data || [],
           breeding_batches: breedingRows.data || [],
-          fry_observations: fryRows.data || []
+          fry_observations: fryRows.data || [], health_records: healthRows.data || [], equipment: equipmentRows.data || [], expenses: expenseRows.data || [], photo_journal: photoJournalRows.data || []
         }
       };
       const date = new Date().toISOString().slice(0, 10);
@@ -723,16 +860,20 @@ function Dashboard({ user, onSignOut }) {
     setBackupBusy(true);
     setSettingsMessage('');
     try {
-      const [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows] = await Promise.all([
+      const [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows] = await Promise.all([
         supabase.from('aquariums').select('*').eq('user_id', user.id),
         supabase.from('fish').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('posts').select('*').eq('user_id', user.id),
         supabase.from('water_tests').select('*').eq('user_id', user.id),
         supabase.from('breeding_batches').select('*').eq('user_id', user.id),
-        supabase.from('fry_observations').select('*').eq('user_id', user.id)
+        supabase.from('fry_observations').select('*').eq('user_id', user.id),
+        supabase.from('health_records').select('*').eq('user_id', user.id),
+        supabase.from('equipment').select('*').eq('user_id', user.id),
+        supabase.from('expenses').select('*').eq('user_id', user.id),
+        supabase.from('photo_journal').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows].find(result => result.error);
       if (failed) throw failed.error;
       const tanksById = new Map((aquariums.data || []).map(tank => [tank.id, tank]));
       const rows = [
@@ -743,12 +884,16 @@ function Dashboard({ user, onSignOut }) {
         ...(postRows.data || []).map(p => ['Publicação', '', p.content || '', '', '', '']),
         ...(waterTestRows.data || []).map(t => ['Qualidade da água', t.aquarium_id ? (tanksById.get(t.aquarium_id)?.name || '') : 'Sem aquário', ['Temperatura: ' + (t.temperature ?? ''), 'pH: ' + (t.ph ?? ''), 'Amônia: ' + (t.ammonia ?? ''), 'Nitrito: ' + (t.nitrite ?? ''), 'Nitrato: ' + (t.nitrate ?? ''), t.notes || ''].filter(Boolean).join(' | '), '', '', '', t.tested_at ? new Date(t.tested_at).toLocaleString('pt-BR') : '']),
         ...(breedingRows.data || []).map(b => ['Cria / nascimento', b.species + (b.variety ? ' — ' + b.variety : ''), [b.female_parent ? 'Mãe: ' + b.female_parent : '', b.male_parent ? 'Pai: ' + b.male_parent : '', b.notes || ''].filter(Boolean).join(' | '), b.aquarium_id ? (tanksById.get(b.aquarium_id)?.name || '') : 'Sem aquário', b.fry_count, '', b.birth_date || '']),
-        ...(fryRows.data || []).map(o => ['Crescimento de alevinos', breedingRows.data?.find(b => b.id === o.batch_id)?.species || '', [o.average_size_mm !== null ? 'Tamanho médio: ' + o.average_size_mm + ' mm' : '', o.food || '', o.notes || ''].filter(Boolean).join(' | '), '', o.quantity, '', o.observed_at || ''])
+        ...(fryRows.data || []).map(o => ['Crescimento de alevinos', breedingRows.data?.find(b => b.id === o.batch_id)?.species || '', [o.average_size_mm !== null ? 'Tamanho médio: ' + o.average_size_mm + ' mm' : '', o.food || '', o.notes || ''].filter(Boolean).join(' | '), '', o.quantity, '', o.observed_at || '']),
+        ...(healthRows.data || []).map(h => ['Saúde dos peixes', h.fish_name || '', [h.symptoms, h.treatment || '', h.medication || '', h.status || '', h.notes || ''].filter(Boolean).join(' | '), tanksById.get(h.aquarium_id)?.name || '', '', '', h.recorded_at ? new Date(h.recorded_at).toLocaleString('pt-BR') : '']),
+        ...(equipmentRows.data || []).map(item => ['Equipamento', item.name, [item.brand_model || '', item.category || '', item.notes || '', item.maintenance_interval_days ? 'Manutenção a cada ' + item.maintenance_interval_days + ' dias' : ''].filter(Boolean).join(' | '), tanksById.get(item.aquarium_id)?.name || '', '', item.last_maintenance_at || '', item.installed_at || '']),
+        ...(expenseRows.data || []).map(item => ['Despesa', item.description, [item.category || '', item.notes || ''].filter(Boolean).join(' | '), tanksById.get(item.aquarium_id)?.name || '', formatCurrency(item.amount), '', item.spent_at || '']),
+        ...(photoJournalRows.data || []).map(item => ['Diário de fotos', item.caption || '', 'Imagem mantida no armazenamento privado', tanksById.get(item.aquarium_id)?.name || '', '', '', item.taken_at || ''])
       ];
       const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
       const date = new Date().toISOString().slice(0, 10);
       downloadFile(csv, 'aquaprofish-dados-' + date + '.csv', 'text/csv;charset=utf-8');
-      setSettingsMessage('Planilha CSV criada com aquários, peixes, tarefas, publicações, medições da água, crias e crescimento dos alevinos.');
+      setSettingsMessage('Planilha CSV criada com aquários, peixes, tarefas, comunidade, qualidade da água, saúde, equipamentos, despesas, crias e diário de fotos.');
     } catch (error) {
       console.error('Erro ao exportar CSV:', error);
       setSettingsMessage('Não foi possível criar a planilha. Verifique a conexão e tente novamente.');
@@ -782,6 +927,10 @@ function Dashboard({ user, onSignOut }) {
       const waterRows = pickRows(data.water_tests, ['id','aquarium_id','tested_at','temperature','ph','ammonia','nitrite','nitrate','notes','created_at']);
       const breedingRows = pickRows(data.breeding_batches, ['id','aquarium_id','species','variety','birth_date','fry_count','female_parent','male_parent','notes','created_at']);
       const fryRows = pickRows(data.fry_observations, ['id','batch_id','observed_at','quantity','average_size_mm','food','notes','created_at']);
+      const healthRows = pickRows(data.health_records, ['id','aquarium_id','recorded_at','fish_name','symptoms','treatment','medication','status','notes','created_at']);
+      const equipmentRows = pickRows(data.equipment, ['id','aquarium_id','name','category','brand_model','installed_at','maintenance_interval_days','last_maintenance_at','notes','created_at']);
+      const expenseRows = pickRows(data.expenses, ['id','aquarium_id','equipment_id','description','category','amount','spent_at','notes','created_at']);
+      const photoJournalRows = pickRows(data.photo_journal, ['id','aquarium_id','image_path','caption','taken_at','created_at']);
       const postRows = pickRows(data.posts, ['id','content','image_url','created_at','likes']);
       const validIds = rows => rows.filter(row => row.id && row.id !== 'undefined');
       const restore = async (table, rows, conflict = 'id') => {
@@ -794,6 +943,10 @@ function Dashboard({ user, onSignOut }) {
       await restore('water_tests', validIds(waterRows));
       await restore('breeding_batches', validIds(breedingRows));
       await restore('fry_observations', validIds(fryRows));
+      await restore('health_records', validIds(healthRows));
+      await restore('equipment', validIds(equipmentRows));
+      await restore('expenses', validIds(expenseRows));
+      await restore('photo_journal', validIds(photoJournalRows));
       await restore('tasks', validIds(taskRows));
       await restore('posts', validIds(postRows));
       const postIds = [...new Set([
@@ -863,6 +1016,9 @@ function Dashboard({ user, onSignOut }) {
             {section === 'Aquários' && <button className="primary-button" onClick={() => openModal('tank')}><Plus size={18}/> Novo aquário</button>}
             {section === 'Meus peixes' && <button className="primary-button" onClick={() => openModal('fish')}><Plus size={18}/> Cadastrar peixe</button>}
             {section === 'Rotina' && <button className="primary-button" onClick={() => openModal('task')}><Plus size={18}/> Nova tarefa</button>}
+            {section === 'Saúde dos peixes' && <button className="primary-button" onClick={() => { setForm({ recordedAt: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16), status: 'observando' }); setModal('healthRecord'); }}><Plus size={18}/> Registrar ocorrência</button>}
+            {section === 'Equipamentos e gastos' && <div className="heading-actions"><button className="secondary-button" onClick={() => { setForm({ spentAt: new Date().toISOString().slice(0,10), category: 'other' }); setModal('expense'); }}><Plus size={17}/> Lançar gasto</button><button className="primary-button" onClick={() => { setForm({ category: 'filter', maintenanceIntervalDays: '30' }); setModal('equipment'); }}><Plus size={18}/> Cadastrar equipamento</button></div>}
+            {section === 'Diário de fotos' && <button className="primary-button" onClick={() => { setForm({ takenAt: new Date().toISOString().slice(0,10) }); setModal('photoEntry'); }}><Plus size={18}/> Adicionar foto</button>}
             {section === 'Reprodução e alevinos' && <button className="primary-button" onClick={() => { setForm({ birthDate: new Date().toISOString().slice(0,10), fryCount: '0' }); setModal('brood'); }}><Plus size={18}/> Registrar cria</button>}
             {section === 'Comunidade' && <button className="primary-button" onClick={() => openModal('post')}><Plus size={18}/> Publicar</button>}
           </div>
@@ -998,6 +1154,61 @@ function Dashboard({ user, onSignOut }) {
             </section>
           </section>}
 
+          {section === 'Saúde dos peixes' && <section className="health-layout">
+            <div className="health-summary-grid">
+              <article className="panel routine-summary-card"><span>🩺</span><div><small>Ocorrências registradas</small><strong>{healthRecords.length}</strong></div></article>
+              <article className="panel routine-summary-card"><span>💊</span><div><small>Em tratamento</small><strong>{healthRecords.filter(item => item.status === 'tratamento').length}</strong></div></article>
+              <article className="panel routine-summary-card"><span>✅</span><div><small>Recuperados</small><strong>{healthRecords.filter(item => item.status === 'recuperado').length}</strong></div></article>
+            </div>
+            <section className="panel page-panel">
+              <div className="panel-heading"><div><h3>Histórico de saúde</h3><p>Registre sintomas, cuidados e evolução de cada peixe</p></div><Stethoscope size={21}/></div>
+              {healthRecords.length ? <div className="health-record-list">{healthRecords.map(record => <article className="health-record-card" key={record.id}>
+                <div className="health-record-main"><div className="health-record-title"><strong>{record.fish_name || 'Peixe não identificado'}</strong><span className={'tag ' + (record.status === 'recuperado' ? 'success' : record.status === 'tratamento' ? 'warning' : '')}>{record.status === 'recuperado' ? 'Recuperado' : record.status === 'tratamento' ? 'Em tratamento' : 'Observando'}</span></div>
+                  <small>{tanks.find(tank => tank.id === record.aquarium_id)?.name || 'Sem aquário definido'} • {new Date(record.recorded_at).toLocaleString('pt-BR')}</small>
+                  <p><b>Sintomas:</b> {record.symptoms}</p>{record.treatment && <p><b>Cuidados:</b> {record.treatment}</p>}{record.medication && <p><b>Medicação:</b> {record.medication}</p>}{record.notes && <p>{record.notes}</p>}
+                </div><button type="button" className="danger-icon-button" onClick={() => deleteHealthRecord(record)} aria-label="Excluir registro de saúde"><Trash2 size={15}/></button>
+              </article>)}</div> : <Empty title="Nenhum registro de saúde" text="Anote os sintomas e os cuidados realizados para acompanhar a evolução dos peixes."/>}
+              <p className="note">Este histórico ajuda a organizar observações e tratamentos. Não substitui orientação veterinária especializada em animais aquáticos.</p>
+            </section>
+          </section>}
+
+          {section === 'Equipamentos e gastos' && <section className="equipment-expenses-layout">
+            <div className="routine-summary-grid">
+              <article className="panel routine-summary-card"><span>⚙️</span><div><small>Equipamentos</small><strong>{equipment.length}</strong></div></article>
+              <article className="panel routine-summary-card"><span>🛠️</span><div><small>Manutenção vencida</small><strong>{equipment.filter(item => { const due = nextMaintenanceDate(item); return due && due < new Date().toISOString().slice(0,10); }).length}</strong></div></article>
+              <article className="panel routine-summary-card"><span>💰</span><div><small>Gastos neste mês</small><strong>{formatCurrency(expenses.filter(item => String(item.spent_at).slice(0,7) === new Date().toISOString().slice(0,7)).reduce((sum,item) => sum + Number(item.amount || 0), 0))}</strong></div></article>
+            </div>
+            <section className="panel page-panel">
+              <div className="panel-heading"><div><h3>Meus equipamentos</h3><p>Controle filtros, aquecedores, iluminação e manutenções</p></div><Wrench size={20}/></div>
+              {equipment.length ? <div className="equipment-grid">{equipment.map(item => {
+                const due = nextMaintenanceDate(item);
+                const overdue = due && due < new Date().toISOString().slice(0,10);
+                const categoryLabel = ({filter:'Filtro',heater:'Aquecedor',lighting:'Iluminação',pump:'Bomba',uv:'Lâmpada UV',co2:'CO₂',other:'Outro'})[item.category] || 'Outro';
+                return <article className="equipment-card" key={item.id}><div className="equipment-card-head"><span className="tag">{categoryLabel}</span><button type="button" className="danger-icon-button" onClick={() => deleteEquipment(item)} aria-label="Excluir equipamento"><Trash2 size={14}/></button></div>
+                  <h3>{item.name}</h3><p>{item.brand_model || 'Marca/modelo não informado'}</p><small>{tanks.find(tank => tank.id === item.aquarium_id)?.name || 'Sem aquário definido'}</small>
+                  <div className="equipment-maintenance"><span>{due ? 'Próxima manutenção: ' + new Date(due + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem lembrete de manutenção'}</span>{due && <span className={'tag ' + (overdue ? 'warning' : 'success')}>{overdue ? 'Atrasada' : 'Programada'}</span>}</div>
+                  {item.maintenance_interval_days ? <small>Intervalo: a cada {item.maintenance_interval_days} dias</small> : null}
+                  <button type="button" className="secondary-button maintenance-button" onClick={() => markEquipmentMaintained(item)}><Check size={15}/> Registrar manutenção feita</button>
+                  {item.notes && <p className="equipment-notes">{item.notes}</p>}
+                </article>;
+              })}</div> : <Empty title="Nenhum equipamento cadastrado" text="Cadastre seus equipamentos para organizar as revisões e a manutenção."/>}
+            </section>
+            <section className="panel page-panel">
+              <div className="panel-heading"><div><h3>Despesas do aquarismo</h3><p>Compras, alimentação, medicamentos e manutenção</p></div><Wallet size={20}/></div>
+              {expenses.length ? <div className="expense-list">{expenses.map(item => <article className="expense-row" key={item.id}><div><strong>{item.description}</strong><small>{({equipment:'Equipamento',food:'Alimentação',medicine:'Medicamentos',fish:'Peixes e animais',maintenance:'Manutenção',other:'Outros'})[item.category] || 'Outros'} • {item.aquarium_id ? (tanks.find(tank => tank.id === item.aquarium_id)?.name || 'Aquário') : 'Geral'} • {new Date(item.spent_at + 'T12:00:00').toLocaleDateString('pt-BR')}</small>{item.notes && <p>{item.notes}</p>}</div><strong className="expense-amount">{formatCurrency(item.amount)}</strong><button type="button" className="danger-icon-button" onClick={() => deleteExpense(item)} aria-label="Excluir despesa"><Trash2 size={14}/></button></article>)}</div> : <Empty title="Nenhuma despesa lançada" text="Registre seus gastos para acompanhar quanto investe no aquarismo."/>}
+              <div className="expense-total"><span>Total registrado</span><strong>{formatCurrency(expenses.reduce((sum,item) => sum + Number(item.amount || 0), 0))}</strong></div>
+            </section>
+          </section>}
+
+          {section === 'Diário de fotos' && <section className="panel page-panel photo-journal-layout">
+            <div className="panel-heading"><div><h3>Evolução dos seus aquários</h3><p>Fotos privadas, visíveis somente na sua conta</p></div><Camera size={21}/></div>
+            {photoEntries.length ? <div className="photo-journal-grid">{photoEntries.map(photo => <article className="photo-journal-card" key={photo.id}>
+              {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.caption || 'Foto do diário AquaProFish'} loading="lazy"/> : <div className="photo-unavailable">Foto indisponível. Abra o app novamente para renovar o acesso.</div>}
+              <div className="photo-journal-copy"><strong>{photo.caption || 'Registro do aquário'}</strong><small>{tanks.find(tank => tank.id === photo.aquarium_id)?.name || 'Sem aquário definido'} • {new Date(photo.taken_at + 'T12:00:00').toLocaleDateString('pt-BR')}</small><button type="button" className="danger-icon-button" onClick={() => deletePhotoEntry(photo)} aria-label="Excluir foto do diário"><Trash2 size={14}/> Excluir</button></div>
+            </article>)}</div> : <Empty title="Seu diário ainda está vazio" text="Adicione fotos para comparar cores, crescimento e mudanças no aquário ao longo do tempo."/>}
+            <p className="note">As imagens do diário ficam em armazenamento privado e os links de visualização expiram periodicamente; ao abrir o app, o acesso é renovado.</p>
+          </section>}
+
           {section === 'Reprodução e alevinos' && <section className="breeding-layout">
             <div className="breeding-overview">
               <article className="panel breeding-stat"><span>🐣</span><div><small>Registros de crias</small><strong>{breedingBatches.length}</strong></div></article>
@@ -1021,7 +1232,7 @@ function Dashboard({ user, onSignOut }) {
             <p className="note">A quantidade atual é baseada no último acompanhamento registrado. Os registros ficam associados à sua conta e entram no backup.</p>
           </section>}
 
-          {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Compartilhe experiências e acompanhe os aquaristas que estão conectados agora.</p></div></div><div className="online-panel"><div className="online-heading"><div><strong>Aquaristas online agora</strong><small>Presença em tempo real na comunidade</small></div><span className="online-count">{onlineUsers.length}</span></div>{onlineUsers.length ? <div className="online-list">{onlineUsers.map(person => <div className="online-person" key={person.user_id}><span className="online-avatar">{String(person.display_name || 'A').trim().charAt(0).toUpperCase()}</span><strong>{person.display_name || 'Aquarista'}</strong><i title="Online agora"/></div>)}</div> : <p className="online-empty">Ainda não há outros aquaristas conectados. Quando alguém entrar, aparecerá aqui.</p>}</div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div>{post.userId === user.id && <button type="button" className="danger-icon-button post-delete-button" onClick={() => deletePost(post)} aria-label="Excluir publicação" title="Excluir publicação"><Trash2 size={15}/></button>}<p>{post.text}</p><div className="post-actions">
+          {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Compartilhe experiências e acompanhe os aquaristas que estão conectados agora.</p></div></div><div className="online-panel"><div className="online-heading"><div><strong>Aquaristas online agora</strong><small>Presença em tempo real na comunidade</small></div><span className="online-count">{onlineUsers.length}</span></div>{onlineUsers.length ? <div className="online-list">{onlineUsers.map(person => <div className="online-person" key={person.user_id}><span className="online-avatar">{String(person.display_name || 'A').trim().charAt(0).toUpperCase()}</span><strong>{person.display_name || 'Aquarista'}</strong><i title="Online agora"/></div>)}</div> : <p className="online-empty">Ainda não há outros aquaristas conectados. Quando alguém entrar, aparecerá aqui.</p>}</div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div>{post.userId === user.id && <button type="button" className="danger-icon-button post-delete-button" onClick={() => deletePost(post)} aria-label="Excluir publicação" title="Excluir publicação"><Trash2 size={15}/></button>}<p>{post.text}</p>{post.imageUrl && <img className="post-image" src={post.imageUrl} alt="Foto compartilhada na comunidade AquaProFish" loading="lazy"/>}<div className="post-actions">
                   <button type="button" className={post.likedByMe ? 'post-action liked' : 'post-action'} onClick={() => toggleLike(post.id)} disabled={!!likeBusy[post.id]}>
                     <Heart size={17} fill={post.likedByMe ? 'currentColor' : 'none'}/> {post.likes} {post.likes === 1 ? 'curtida' : 'curtidas'}
                   </button>
@@ -1053,7 +1264,7 @@ function Dashboard({ user, onSignOut }) {
                 <button type="button" className="secondary-button" onClick={exportCsv} disabled={backupBusy}><Download size={17}/> Exportar planilha CSV</button>
                 <label className={`secondary-button settings-import ${backupBusy ? 'disabled' : ''}`}><input type="file" accept=".json,application/json" onChange={importBackup} disabled={backupBusy}/><Download size={17}/> Importar backup JSON</label>
               </div>
-              <p className="note">O backup inclui aquários, peixes, tarefas, medições da água, publicações e suas interações. A restauração adiciona registros que faltam, sem apagar os dados atuais. O arquivo só pode ser restaurado na mesma conta.</p>
+              <p className="note">O backup inclui os registros de aquários, peixes, tarefas, saúde, equipamentos, despesas, medições, crias, diário e comunidade. As fotos permanecem no armazenamento do AquaProFish e não são copiadas dentro do JSON. A restauração adiciona registros que faltam, sem apagar os dados atuais, e só funciona na mesma conta.</p>
               {settingsMessage && <p className="settings-message" role="status">{settingsMessage}</p>}
             </article>
             <article className="panel settings-card">
@@ -1082,7 +1293,7 @@ function Dashboard({ user, onSignOut }) {
           {section === 'Guia de espécies' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Conheça as espécies</h3><p>Toque em um peixe para abrir sua ficha completa</p></div><span className="tag info">5 espécies</span></div><div className="species-grid">{speciesGuide.map(species => <button type="button" className="species-card species-card-button" key={species.name} onClick={() => setSelectedSpecies(species)}><img className="species-thumb" src={species.image} alt={species.name} loading="lazy" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling.style.display = 'grid'; }}/><div className="species-illustration species-fallback"><Fish size={32}/></div><div className="species-card-copy"><h3>{species.name}</h3><i>{species.latin}</i><p>{species.summary}</p><span className="species-open">Ver ficha completa <ChevronRight size={14}/></span></div></button>)}</div></section>}
         </div>
         {!Capacitor.isNativePlatform() && <div className="footer-download-wrap"><a className="footer-download" href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk"><Download size={16}/> Baixe aqui o app</a></div>}
-        <footer className="footer"><span className="footer-brand">AquaProFish · Gestão • Criação • Comunidade</span><span className="footer-version">Versão do app: <strong>1.0.145</strong></span><span className="footer-developer">Desenvolvedor: <strong>Andrino Morales Botelho</strong></span><span>© 2026 AquaProFish. Todos os direitos reservados.</span></footer>
+        <footer className="footer"><span className="footer-brand">AquaProFish · Gestão • Criação • Comunidade</span><span className="footer-version">Versão do app: <strong>{APP_VERSION}</strong></span><span className="footer-developer">Desenvolvedor: <strong>Andrino Morales Botelho</strong></span><span>© 2026 AquaProFish. Todos os direitos reservados.</span></footer>
       </main>
 
       {mobileMenu && <button className="mobile-scrim" onClick={() => setMobileMenu(false)} aria-label="Fechar menu"/>}
@@ -1092,10 +1303,42 @@ function Dashboard({ user, onSignOut }) {
       {availableVersion && <div className="confirm-modal-backdrop update-modal-backdrop" role="presentation"><section className="confirm-modal update-modal" role="dialog" aria-modal="true" aria-labelledby="update-title"><div className="confirm-modal-heading"><h2 id="update-title">Temos uma atualização!</h2></div><p>Nova versão <strong>{availableVersion}</strong> disponível para o AquaProFish.</p><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAvailableVersion('')}>Agora não</button><a className="primary-button update-download-button" href={APK_DOWNLOAD_URL} target="_blank" rel="noreferrer"><Download size={15}/> Atualizar agora</a></div></section></div>}
       {confirmDialog && <div className="confirm-modal-backdrop" role="presentation"><section className="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message"><div className="confirm-modal-heading"><h2 id="confirm-title">Confirmar ação</h2></div><p id="confirm-message">{confirmDialog}</p><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => finishConfirmation(false)}>Cancelar</button><button type="button" className="danger-confirm-button" onClick={() => finishConfirmation(true)}>Confirmar</button></div></section></div>}
 
-      {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' || modal === 'editTask' ? submitTask : modal === 'brood' ? submitBrood : modal === 'fryObservation' ? submitFryObservation : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : modal === 'editTask' ? 'Editar tarefa' : modal === 'brood' ? 'Registrar cria' : modal === 'fryObservation' ? 'Acompanhar alevinos' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
+      {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' || modal === 'editTask' ? submitTask : modal === 'healthRecord' ? submitHealthRecord : modal === 'equipment' ? submitEquipment : modal === 'expense' ? submitExpense : modal === 'photoEntry' ? submitPhotoEntry : modal === 'brood' ? submitBrood : modal === 'fryObservation' ? submitFryObservation : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : modal === 'editTask' ? 'Editar tarefa' : modal === 'healthRecord' ? 'Registrar saúde do peixe' : modal === 'equipment' ? 'Cadastrar equipamento' : modal === 'expense' ? 'Lançar despesa' : modal === 'photoEntry' ? 'Adicionar foto ao diário' : modal === 'brood' ? 'Registrar cria' : modal === 'fryObservation' ? 'Acompanhar alevinos' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
         {(modal === 'tank' || modal === 'editTank') && <><Field label="Nome do aquário *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Aquário da sala"/><div className="form-two"><Field label="Volume" value={form.volume || ''} onChange={v=>setForm({...form,volume:v})} placeholder="Ex.: 100 L"/><Field label="Temperatura" value={form.temperature || ''} onChange={v=>setForm({...form,temperature:v})} placeholder="Ex.: 26 °C"/></div><Field label="pH atual" value={form.ph || ''} onChange={v=>setForm({...form,ph:v})} placeholder="Ex.: 7,0"/><label className="field"><span>Situação do aquário</span><select value={form.status || 'Novo'} onChange={e=>setForm({...form,status:e.target.value})}><option value="Novo">Ainda não avaliado</option><option value="Estável">Estável</option><option value="Atenção">Precisa de atenção</option></select></label></>}
         {(modal === 'fish' || modal === 'editFish') && <><Field label="Nome / variedade *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Guppy Full Red"/><Field label="Espécie" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Poecilia reticulata"/><div className="form-two"><label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(t=><option key={t.id} value={t.id}>{t.name} ({t.volume})</option>)}</select></label><Field label="Quantidade" value={form.count ?? '0'} onChange={v=>setForm({...form,count:v})} placeholder="0" type="number"/></div></>}
         {(modal === 'task' || modal === 'editTask') && <><Field label="Nome da tarefa *" value={form.title || ''} onChange={v=>setForm({...form,title:v})} placeholder="Ex.: Alimentar os peixes"/><label className="field"><span>Tipo de cuidado</span><select value={form.category || 'other'} onChange={e=>setForm({...form,category:e.target.value})}>{taskCategories.map(category=><option key={category.value} value={category.value}>{category.icon} {category.label}</option>)}</select></label><label className="field"><span>Aquário relacionado</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Todos / não definido</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label><Field label="Detalhes" value={form.detail || ''} onChange={v=>setForm({...form,detail:v})} placeholder="Ex.: Pela manhã, pequena quantidade"/><Field label="Data e hora do prazo (opcional)" value={form.dueDate || ''} onChange={v=>setForm({...form,dueDate:v})} type="datetime-local"/><label className="field"><span>Repetir tarefa</span><select value={form.recurrence || 'none'} onChange={e=>setForm({...form,recurrence:e.target.value})}><option value="none">Não se repete</option><option value="daily">Todos os dias</option><option value="weekly">Toda semana</option><option value="monthly">Todo mês</option></select></label><p className="field-hint">Ao concluir uma tarefa recorrente, a próxima será criada automaticamente. O aplicativo destaca tarefas atrasadas e as que vencem nas próximas 24 horas.</p></>}
+        {modal === 'healthRecord' && <>
+          <label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
+          <div className="form-two"><Field label="Peixe / identificação" value={form.fishName || ''} onChange={v=>setForm({...form,fishName:v})} placeholder="Ex.: Guppy fêmea azul"/><Field label="Data e hora" type="datetime-local" value={form.recordedAt || ''} onChange={v=>setForm({...form,recordedAt:v})}/></div>
+          <Field label="Sintomas ou alteração observada *" value={form.symptoms || ''} onChange={v=>setForm({...form,symptoms:v})} placeholder="Ex.: apatia, nadadeiras fechadas, pontos brancos..." area/>
+          <Field label="Cuidados realizados" value={form.treatment || ''} onChange={v=>setForm({...form,treatment:v})} placeholder="Ex.: isolamento, aumento de aeração..."/>
+          <Field label="Medicação (se houver)" value={form.medication || ''} onChange={v=>setForm({...form,medication:v})} placeholder="Nome do produto e dose do rótulo"/>
+          <label className="field"><span>Situação</span><select value={form.status || 'observando'} onChange={e=>setForm({...form,status:e.target.value})}><option value="observando">Em observação</option><option value="tratamento">Em tratamento</option><option value="recuperado">Recuperado</option></select></label>
+          <Field label="Observações" value={form.notes || ''} onChange={v=>setForm({...form,notes:v})} area/>
+        </>}
+        {modal === 'equipment' && <>
+          <Field label="Nome do equipamento *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Filtro externo 500 L/h"/>
+          <label className="field"><span>Tipo</span><select value={form.category || 'other'} onChange={e=>setForm({...form,category:e.target.value})}><option value="filter">Filtro</option><option value="heater">Aquecedor</option><option value="lighting">Iluminação</option><option value="pump">Bomba</option><option value="uv">Lâmpada UV</option><option value="co2">CO₂</option><option value="other">Outro</option></select></label>
+          <label className="field"><span>Aquário relacionado</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
+          <Field label="Marca / modelo" value={form.brandModel || ''} onChange={v=>setForm({...form,brandModel:v})} placeholder="Ex.: marca e modelo"/>
+          <div className="form-two"><Field label="Data de instalação" type="date" value={form.installedAt || ''} onChange={v=>setForm({...form,installedAt:v})}/><Field label="Intervalo de manutenção (dias)" type="number" value={form.maintenanceIntervalDays || ''} onChange={v=>setForm({...form,maintenanceIntervalDays:v})} placeholder="Ex.: 30"/></div>
+          <Field label="Última manutenção" type="date" value={form.lastMaintenanceAt || ''} onChange={v=>setForm({...form,lastMaintenanceAt:v})}/>
+          <Field label="Observações" value={form.notes || ''} onChange={v=>setForm({...form,notes:v})} area/>
+        </>}
+        {modal === 'expense' && <>
+          <Field label="Descrição *" value={form.description || ''} onChange={v=>setForm({...form,description:v})} placeholder="Ex.: Ração para os guppys"/>
+          <div className="form-two"><Field label="Valor em reais *" type="number" value={form.amount || ''} onChange={v=>setForm({...form,amount:v})} placeholder="Ex.: 25,90"/><Field label="Data *" type="date" value={form.spentAt || new Date().toISOString().slice(0,10)} onChange={v=>setForm({...form,spentAt:v})}/></div>
+          <label className="field"><span>Categoria</span><select value={form.category || 'other'} onChange={e=>setForm({...form,category:e.target.value})}><option value="equipment">Equipamentos</option><option value="food">Alimentação</option><option value="medicine">Medicamentos</option><option value="fish">Peixes e animais</option><option value="maintenance">Manutenção</option><option value="other">Outros</option></select></label>
+          <label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Despesa geral</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
+          <label className="field"><span>Equipamento relacionado (opcional)</span><select value={form.equipmentId || ''} onChange={e=>setForm({...form,equipmentId:e.target.value})}><option value="">Não se aplica</option>{equipment.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <Field label="Observações" value={form.notes || ''} onChange={v=>setForm({...form,notes:v})} area/>
+        </>}
+        {modal === 'photoEntry' && <>
+          <label className="field"><span>Foto * (JPG, PNG ou WebP; máximo 10 MB)</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setForm({...form,imageFile:e.target.files?.[0] || null})}/></label>
+          <label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
+          <div className="form-two"><Field label="Data da foto" type="date" value={form.takenAt || new Date().toISOString().slice(0,10)} onChange={v=>setForm({...form,takenAt:v})}/><Field label="Legenda" value={form.caption || ''} onChange={v=>setForm({...form,caption:v})} placeholder="Ex.: crescimento após 30 dias"/></div>
+          <p className="field-hint">A imagem ficará privada, vinculada à sua conta AquaProFish.</p>
+        </>}
         {modal === 'brood' && <>
           <Field label="Espécie *" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Guppy, Plati, Molinésia..."/>
           <Field label="Variedade (opcional)" value={form.variety || ''} onChange={v=>setForm({...form,variety:v})} placeholder="Ex.: Full Red, Wagtail..."/>
@@ -1111,8 +1354,8 @@ function Dashboard({ user, onSignOut }) {
           <Field label="Alimentação" value={form.food || ''} onChange={v=>setForm({...form,food:v})} placeholder="Ex.: náuplios de artêmia, microvermes..."/>
           <Field label="Observações" value={form.notes || ''} onChange={v=>setForm({...form,notes:v})} placeholder="Ex.: estão nadando bem, separados por tamanho..." area/>
         </>}
-        {modal === 'post' && <Field label="O que você gostaria de compartilhar?" value={form.text || ''} onChange={v=>setForm({...form,text:v})} placeholder="Conte uma experiência ou faça uma pergunta..." area/>}
-        <div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>setModal('')}>Cancelar</button><button type="submit" className="primary-button"><Plus size={17}/> Salvar</button></div>
+        {modal === 'post' && <><Field label="O que você gostaria de compartilhar?" value={form.text || ''} onChange={v=>setForm({...form,text:v})} placeholder="Conte uma experiência ou faça uma pergunta..." area/><label className="field"><span>Foto opcional (JPG, PNG ou WebP até 8 MB)</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setForm({...form,imageFile:e.target.files?.[0] || null})}/></label><p className="field-hint">Fotos anexadas a uma publicação ficam visíveis publicamente na comunidade.</p></>}
+        <div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>setModal('')}>Cancelar</button><button type="submit" className="primary-button" disabled={photoUploadBusy}>{photoUploadBusy ? 'Enviando foto...' : <><Plus size={17}/> Salvar</>}</button></div>
       </form></div>}
     </div>
   );
@@ -1142,6 +1385,18 @@ function calcDose(values) {
   return volume>0 && rate>=0 && rateVolume>0 && [volume,rate,rateVolume].every(Number.isFinite) ? volume*rate/rateVolume : 0;
 }
 
+function formatCurrency(value) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+}
+function nextMaintenanceDate(item) {
+  const base = item.last_maintenance_at || item.installed_at;
+  const interval = Number(item.maintenance_interval_days || 0);
+  if (!base || !interval) return null;
+  const date = new Date(String(base).slice(0,10) + 'T12:00:00');
+  if (Number.isNaN(date.getTime())) return null;
+  date.setDate(date.getDate() + interval);
+  return date.toISOString().slice(0,10);
+}
 function Field({ label, value, onChange, placeholder, type='text', area=false }) {
   return <label className="field"><span>{label}</span>{area ? <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows="4"/> : <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>}</label>;
 }
