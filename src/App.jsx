@@ -8,16 +8,24 @@ import {
   Sparkles, Thermometer, Waves, X, Copy, Stethoscope, Wrench, Wallet, Camera
 } from 'lucide-react';
 
-const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.145';
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || '2.0.0-dev';
 const APK_DOWNLOAD_URL = 'https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk';
 function isVersionNewer(latest, installed) {
-  const a = String(latest).split('.').map(Number);
-  const b = String(installed).split('.').map(Number);
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    if ((a[i] || 0) > (b[i] || 0)) return true;
-    if ((a[i] || 0) < (b[i] || 0)) return false;
+  const parse = value => {
+    const [core, prerelease = ''] = String(value).split('-', 2);
+    return { parts: core.split('.').map(part => Number(part) || 0), prerelease };
+  };
+  const a = parse(latest);
+  const b = parse(installed);
+  for (let i = 0; i < Math.max(a.parts.length, b.parts.length); i++) {
+    const av = a.parts[i] || 0;
+    const bv = b.parts[i] || 0;
+    if (av > bv) return true;
+    if (av < bv) return false;
   }
-  return false;
+  if (a.prerelease && !b.prerelease) return false;
+  if (!a.prerelease && b.prerelease) return true;
+  return Boolean(a.prerelease && b.prerelease && a.prerelease.localeCompare(b.prerelease, undefined, { numeric: true }) > 0);
 }
 
 const initialTanks = [];
