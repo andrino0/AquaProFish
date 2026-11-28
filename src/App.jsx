@@ -1275,7 +1275,7 @@ function Dashboard({ user, onSignOut }) {
             <article className="panel settings-card">
               <div className="panel-heading"><div><h3>Backup e exportação</h3><p>Tenha uma cópia dos seus registros guardada com você.</p></div><Download size={20}/></div>
               <div className="settings-actions">
-                <button type="button" className="primary-button" onClick={exportBackup} disabled={backupBusy}><Download size={17}/>{backupBusy ? 'Aguarde...' : 'Exportar backup completo'}</button>
+                <button type="button" className="primary-button" onClick={exportBackup} disabled={backupBusy}><Download size={17}/>{backupBusy ? 'Aguarde...' : 'Exportar backup dos dados'}</button>
                 <button type="button" className="secondary-button" onClick={exportCsv} disabled={backupBusy}><Download size={17}/> Exportar planilha CSV</button>
                 <label className={`secondary-button settings-import ${backupBusy ? 'disabled' : ''}`}><input type="file" accept=".json,application/json" onChange={importBackup} disabled={backupBusy}/><Download size={17}/> Importar backup JSON</label>
               </div>
