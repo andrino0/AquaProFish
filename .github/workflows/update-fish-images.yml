@@ -1,40 +1,77 @@
 name: Atualizar imagens Guppy e Betta
 
 on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/image-upload/trigger.json"
   workflow_dispatch:
-    inputs:
-      guppy_url:
-        description: URL temporária da nova imagem do Guppy
-        required: true
-        type: string
-      betta_url:
-        description: URL temporária da nova imagem do Betta
-        required: true
-        type: string
 
 permissions:
   contents: write
+  actions: write
+
+concurrency:
+  group: aquaprofish-fish-images
+  cancel-in-progress: false
 
 jobs:
   replace-fish-images:
     runs-on: ubuntu-latest
     steps:
-      - name: Baixar imagens enviadas
+      - name: Checkout do AquaProFish
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Validar e instalar as novas imagens
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f ".github/image-upload/trigger.json" ]; then
+            echo "Nenhum pacote de imagens pendente; nada a fazer."
+            exit 0
+          fi
+
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const dir = '.github/image-upload';
+          const guppy = Buffer.from(fs.readFileSync(dir + '/guppy.webp.b64', 'utf8').trim(), 'base64');
+          const betta = Buffer.from(fs.readFileSync(dir + '/betta.webp.b64', 'utf8').trim(), 'base64');
+          const isWebp = b => b.length > 16 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP';
+          if (!isWebp(guppy) || !isWebp(betta)) throw new Error('Uma das imagens não é um WebP válido.');
+          fs.writeFileSync('public/guppy-g2-ai-small.webp', guppy);
+          fs.writeFileSync('public/betta-b3-ai-small.webp', betta);
+
+          const appPath = 'src/App.jsx';
+          let app = fs.readFileSync(appPath, 'utf8');
+          if (!app.includes('guppy-g2-ai-small.jpg') || !app.includes('betta-b3-ai-small.jpg')) {
+            throw new Error('Os endereços atuais das imagens não foram encontrados; nenhuma referência foi alterada.');
+          }
+          app = app.replaceAll('guppy-g2-ai-small.jpg', 'guppy-g2-ai-small.webp');
+          app = app.replaceAll('betta-b3-ai-small.jpg', 'betta-b3-ai-small.webp');
+          fs.writeFileSync(appPath, app);
+          console.log('As duas imagens WebP foram validadas e vinculadas ao guia.');
+          NODE
+
+      - name: Registrar a atualização no GitHub
         env:
-          GUPPY_URL: ${{ inputs.guppy_url }}
-          BETTA_URL: ${{ inputs.betta_url }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "::add-mask::$GUPPY_URL"
-          echo "::add-mask::$BETTA_URL"
-          curl --fail --location --silent --show-error "$GUPPY_URL" --output public/guppy-g2-ai-small.jpg
-          curl --fail --location --silent --show-error "$BETTA_URL" --output public/betta-b3-ai-small.jpg
-          file public/guppy-g2-ai-small.jpg public/betta-b3-ai-small.jpg
-          test -s public/guppy-g2-ai-small.jpg
-          test -s public/betta-b3-ai-small.jpg
-      - name: Salvar imagens no GitHub
-        run: |
+          set -euo pipefail
+          rm -rf .github/image-upload
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/guppy-g2-ai-small.jpg public/betta-b3-ai-small.jpg
-          git commit -m "Atualiza fotos do Guppy e Betta no guia"
-          git push
+          git add -A
+          git commit -m "Atualiza imagens do Guppy e Betta no guia"
+          git push origin HEAD:main
+
+          # O GITHUB_TOKEN não dispara workflows por push; iniciamos as duas publicações explicitamente.
+          for workflow in build-apk.yml deploy.yml; do
+            curl --fail --silent --show-error --request POST \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/andrino0/AquaProFish/actions/workflows/${workflow}/dispatches" \
+              --data '{"ref":"main"}'
+          done
