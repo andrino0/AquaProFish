@@ -3,7 +3,7 @@ import Auth from './Auth.jsx';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from './lib/supabase.js';
 import {
-  Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Download, Droplets,
+  Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Download, Droplets, Egg,
   Fish, Heart, HeartPulse, Home, Menu, MessageCircle, Pencil, Plus, Search, Settings, Trash2,
   Sparkles, Thermometer, Waves, X, Copy
 } from 'lucide-react';
@@ -145,6 +145,8 @@ function Dashboard({ user, onSignOut }) {
   const [fishList, setFishList] = useState(initialFish);
   const [tasks, setTasks] = useState(initialTasks);
   const [waterTests, setWaterTests] = useState([]);
+  const [breedingBatches, setBreedingBatches] = useState([]);
+  const [fryObservations, setFryObservations] = useState([]);
   const [waterForm, setWaterForm] = useState({ aquariumId: '', testedAt: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16), temperature: '', ph: '', ammonia: '', nitrite: '', nitrate: '', notes: '' });
   const [posts, setPosts] = useState(initialPosts);
   const [dataLoading, setDataLoading] = useState(true);
@@ -243,7 +245,7 @@ function Dashboard({ user, onSignOut }) {
     let active = true;
     async function loadWorkspace() {
       setDataLoading(true);
-      const [tankResult, fishResult, taskResult, postResult, profileResult, likeResult, commentResult, waterResult] = await Promise.all([
+      const [tankResult, fishResult, taskResult, postResult, profileResult, likeResult, commentResult, waterResult, breedingResult, fryResult] = await Promise.all([
         supabase.from('aquariums').select('*').order('created_at', { ascending: false }),
         supabase.from('fish').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
@@ -251,9 +253,11 @@ function Dashboard({ user, onSignOut }) {
         supabase.from('profiles').select('id,display_name'),
         supabase.from('post_likes').select('post_id,user_id'),
         supabase.from('post_comments').select('*').order('created_at', { ascending: true }),
-        supabase.from('water_tests').select('*').order('tested_at', { ascending: false })
+        supabase.from('water_tests').select('*').order('tested_at', { ascending: false }),
+        supabase.from('breeding_batches').select('*').order('birth_date', { ascending: false }),
+        supabase.from('fry_observations').select('*').order('observed_at', { ascending: false })
       ]);
-      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error || likeResult.error || commentResult.error || waterResult.error;
+      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error || likeResult.error || commentResult.error || waterResult.error || breedingResult.error || fryResult.error;
       if (failure) {
         console.error('Erro ao carregar dados do AquaProFish:', failure);
         if (active) setSaveError('Não foi possível carregar todos os dados. Verifique sua conexão e tente atualizar.');
@@ -289,6 +293,8 @@ function Dashboard({ user, onSignOut }) {
           tag: 'Comunidade'
         })));
         setWaterTests((waterResult.data || []).map(test => ({ ...test })));
+        setBreedingBatches((breedingResult.data || []).map(batch => ({ ...batch })));
+        setFryObservations((fryResult.data || []).map(observation => ({ ...observation })));
         setSaveError('');
       }
       if (active) setDataLoading(false);
@@ -312,6 +318,7 @@ function Dashboard({ user, onSignOut }) {
     { label: 'Meus peixes', icon: Fish },
     { label: 'Rotina', icon: CalendarDays },
     { label: 'Qualidade da água', icon: Droplets },
+    { label: 'Reprodução e alevinos', icon: Egg },
     { label: 'Comunidade', icon: MessageCircle },
     { label: 'Guia de espécies', icon: BookOpen },
     { label: 'Apoie o AquaProFish', icon: Heart },
@@ -447,6 +454,61 @@ function Dashboard({ user, onSignOut }) {
       return;
     }
     setWaterTests(current => current.filter(item => item.id !== test.id));
+  }
+
+  async function submitBrood(e) {
+    e.preventDefault();
+    if (!form.species?.trim() || !form.birthDate || !Number.isInteger(Number(form.fryCount)) || Number(form.fryCount) < 0) {
+      setSaveError('Informe a espécie, a data do nascimento e uma quantidade válida de alevinos.');
+      return;
+    }
+    setSaveError('');
+    const { data, error } = await supabase.from('breeding_batches').insert({
+      user_id: user.id, aquarium_id: form.aquariumId || null,
+      species: form.species.trim(), variety: form.variety?.trim() || null,
+      birth_date: form.birthDate, fry_count: Number(form.fryCount),
+      female_parent: form.femaleParent?.trim() || null,
+      male_parent: form.maleParent?.trim() || null,
+      notes: form.notes?.trim() || null
+    }).select().single();
+    if (error) { setSaveError('Não foi possível salvar a cria: ' + error.message); return; }
+    setBreedingBatches(current => [data, ...current]);
+    setModal('');
+  }
+
+  async function submitFryObservation(e) {
+    e.preventDefault();
+    const quantity = Number(form.quantity);
+    const sizeRaw = String(form.averageSizeMm ?? '').trim().replace(',', '.');
+    const size = sizeRaw === '' ? null : Number(sizeRaw);
+    if (!form.batchId || !form.observedAt || !Number.isInteger(quantity) || quantity < 0 || (size !== null && (!Number.isFinite(size) || size < 0))) {
+      setSaveError('Confira a data, a quantidade e o tamanho médio informado.');
+      return;
+    }
+    setSaveError('');
+    const { data, error } = await supabase.from('fry_observations').insert({
+      user_id: user.id, batch_id: form.batchId, observed_at: form.observedAt,
+      quantity, average_size_mm: size, food: form.food?.trim() || null,
+      notes: form.notes?.trim() || null
+    }).select().single();
+    if (error) { setSaveError('Não foi possível salvar o acompanhamento: ' + error.message); return; }
+    setFryObservations(current => [data, ...current]);
+    setModal('');
+  }
+
+  async function deleteBreedingBatch(batch) {
+    if (!(await confirmAction('Excluir este registro de cria e todo o histórico de crescimento dos alevinos?'))) return;
+    const { error } = await supabase.from('breeding_batches').delete().eq('id', batch.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir o registro: ' + error.message); return; }
+    setBreedingBatches(current => current.filter(item => item.id !== batch.id));
+    setFryObservations(current => current.filter(item => item.batch_id !== batch.id));
+  }
+
+  async function deleteFryObservation(observation) {
+    if (!(await confirmAction('Excluir este registro de crescimento?'))) return;
+    const { error } = await supabase.from('fry_observations').delete().eq('id', observation.id).eq('user_id', user.id);
+    if (error) { setSaveError('Não foi possível excluir o acompanhamento: ' + error.message); return; }
+    setFryObservations(current => current.filter(item => item.id !== observation.id));
   }
 
   async function submitPost(e) {
@@ -611,16 +673,18 @@ function Dashboard({ user, onSignOut }) {
     setBackupBusy(true);
     setSettingsMessage('');
     try {
-      const [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows] = await Promise.all([
+      const [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows] = await Promise.all([
         supabase.from('aquariums').select('*').eq('user_id', user.id),
         supabase.from('fish').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('posts').select('*').eq('user_id', user.id),
         supabase.from('post_likes').select('*').eq('user_id', user.id),
         supabase.from('post_comments').select('*').eq('user_id', user.id),
-        supabase.from('water_tests').select('*').eq('user_id', user.id)
+        supabase.from('water_tests').select('*').eq('user_id', user.id),
+        supabase.from('breeding_batches').select('*').eq('user_id', user.id),
+        supabase.from('fry_observations').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows].find(result => result.error);
       if (failed) throw failed.error;
       const backup = {
         app: 'AquaProFish',
@@ -635,7 +699,9 @@ function Dashboard({ user, onSignOut }) {
           posts: postRows.data || [],
           post_likes: likes.data || [],
           post_comments: comments.data || [],
-          water_tests: waterTestRows.data || []
+          water_tests: waterTestRows.data || [],
+          breeding_batches: breedingRows.data || [],
+          fry_observations: fryRows.data || []
         }
       };
       const date = new Date().toISOString().slice(0, 10);
@@ -653,14 +719,16 @@ function Dashboard({ user, onSignOut }) {
     setBackupBusy(true);
     setSettingsMessage('');
     try {
-      const [aquariums, fish, taskRows, postRows, waterTestRows] = await Promise.all([
+      const [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows] = await Promise.all([
         supabase.from('aquariums').select('*').eq('user_id', user.id),
         supabase.from('fish').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('posts').select('*').eq('user_id', user.id),
-        supabase.from('water_tests').select('*').eq('user_id', user.id)
+        supabase.from('water_tests').select('*').eq('user_id', user.id),
+        supabase.from('breeding_batches').select('*').eq('user_id', user.id),
+        supabase.from('fry_observations').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows, waterTestRows].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows].find(result => result.error);
       if (failed) throw failed.error;
       const tanksById = new Map((aquariums.data || []).map(tank => [tank.id, tank]));
       const rows = [
@@ -669,7 +737,9 @@ function Dashboard({ user, onSignOut }) {
         ...(fish.data || []).map(f => ['Peixe', f.name, f.species || '', tanksById.get(f.aquarium_id)?.name || 'Sem aquário', f.quantity ?? '', '']),
         ...(taskRows.data || []).map(t => ['Tarefa', t.title, t.detail || '', tanksById.get(t.aquarium_id)?.name || '', '', t.completed ? 'Concluída' : 'Pendente', t.due_date ? new Date(t.due_date).toLocaleString('pt-BR') : '', (taskCategories.find(c => c.value === t.category)?.label || 'Outros cuidados') + ' | ' + ({daily:'Diária',weekly:'Semanal',monthly:'Mensal'}[t.recurrence] || 'Não se repete')]),
         ...(postRows.data || []).map(p => ['Publicação', '', p.content || '', '', '', '']),
-        ...(waterTestRows.data || []).map(t => ['Qualidade da água', t.aquarium_id ? (tanksById.get(t.aquarium_id)?.name || '') : 'Sem aquário', ['Temperatura: ' + (t.temperature ?? ''), 'pH: ' + (t.ph ?? ''), 'Amônia: ' + (t.ammonia ?? ''), 'Nitrito: ' + (t.nitrite ?? ''), 'Nitrato: ' + (t.nitrate ?? ''), t.notes || ''].filter(Boolean).join(' | '), '', '', '', t.tested_at ? new Date(t.tested_at).toLocaleString('pt-BR') : ''])
+        ...(waterTestRows.data || []).map(t => ['Qualidade da água', t.aquarium_id ? (tanksById.get(t.aquarium_id)?.name || '') : 'Sem aquário', ['Temperatura: ' + (t.temperature ?? ''), 'pH: ' + (t.ph ?? ''), 'Amônia: ' + (t.ammonia ?? ''), 'Nitrito: ' + (t.nitrite ?? ''), 'Nitrato: ' + (t.nitrate ?? ''), t.notes || ''].filter(Boolean).join(' | '), '', '', '', t.tested_at ? new Date(t.tested_at).toLocaleString('pt-BR') : '']),
+        ...(breedingRows.data || []).map(b => ['Cria / nascimento', b.species + (b.variety ? ' — ' + b.variety : ''), [b.female_parent ? 'Mãe: ' + b.female_parent : '', b.male_parent ? 'Pai: ' + b.male_parent : '', b.notes || ''].filter(Boolean).join(' | '), b.aquarium_id ? (tanksById.get(b.aquarium_id)?.name || '') : 'Sem aquário', b.fry_count, '', b.birth_date || '']),
+        ...(fryRows.data || []).map(o => ['Crescimento de alevinos', breedingRows.data?.find(b => b.id === o.batch_id)?.species || '', [o.average_size_mm !== null ? 'Tamanho médio: ' + o.average_size_mm + ' mm' : '', o.food || '', o.notes || ''].filter(Boolean).join(' | '), '', o.quantity, '', o.observed_at || ''])
       ];
       const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
       const date = new Date().toISOString().slice(0, 10);
@@ -706,6 +776,8 @@ function Dashboard({ user, onSignOut }) {
       const fish = pickRows(data.fish, ['id','aquarium_id','name','species','quantity','notes','created_at']);
       const taskRows = pickRows(data.tasks, ['id','title','due_date','completed','created_at','detail','recurrence','generated_from','category','aquarium_id']);
       const waterRows = pickRows(data.water_tests, ['id','aquarium_id','tested_at','temperature','ph','ammonia','nitrite','nitrate','notes','created_at']);
+      const breedingRows = pickRows(data.breeding_batches, ['id','aquarium_id','species','variety','birth_date','fry_count','female_parent','male_parent','notes','created_at']);
+      const fryRows = pickRows(data.fry_observations, ['id','batch_id','observed_at','quantity','average_size_mm','food','notes','created_at']);
       const postRows = pickRows(data.posts, ['id','content','image_url','created_at','likes']);
       const validIds = rows => rows.filter(row => row.id && row.id !== 'undefined');
       const restore = async (table, rows, conflict = 'id') => {
@@ -716,6 +788,8 @@ function Dashboard({ user, onSignOut }) {
       await restore('aquariums', validIds(aquariums));
       await restore('fish', validIds(fish));
       await restore('water_tests', validIds(waterRows));
+      await restore('breeding_batches', validIds(breedingRows));
+      await restore('fry_observations', validIds(fryRows));
       await restore('tasks', validIds(taskRows));
       await restore('posts', validIds(postRows));
       const postIds = [...new Set([
@@ -785,6 +859,7 @@ function Dashboard({ user, onSignOut }) {
             {section === 'Aquários' && <button className="primary-button" onClick={() => openModal('tank')}><Plus size={18}/> Novo aquário</button>}
             {section === 'Meus peixes' && <button className="primary-button" onClick={() => openModal('fish')}><Plus size={18}/> Cadastrar peixe</button>}
             {section === 'Rotina' && <button className="primary-button" onClick={() => openModal('task')}><Plus size={18}/> Nova tarefa</button>}
+            {section === 'Reprodução e alevinos' && <button className="primary-button" onClick={() => openModal('brood')}><Plus size={18}/> Registrar cria</button>}
             {section === 'Comunidade' && <button className="primary-button" onClick={() => openModal('post')}><Plus size={18}/> Publicar</button>}
           </div>
 
@@ -887,6 +962,29 @@ function Dashboard({ user, onSignOut }) {
             </section>
           </section>}
 
+          {section === 'Reprodução e alevinos' && <section className="breeding-layout">
+            <div className="breeding-overview">
+              <article className="panel breeding-stat"><span>🐣</span><div><small>Registros de crias</small><strong>{breedingBatches.length}</strong></div></article>
+              <article className="panel breeding-stat"><span>🐟</span><div><small>Total inicial de alevinos</small><strong>{breedingBatches.reduce((sum, batch) => sum + Number(batch.fry_count || 0), 0)}</strong></div></article>
+              <article className="panel breeding-stat"><span>📈</span><div><small>Acompanhamentos</small><strong>{fryObservations.length}</strong></div></article>
+            </div>
+            <div className="section-title"><div><h2>Minhas crias</h2><p>Registre os nascimentos e acompanhe o desenvolvimento dos filhotes.</p></div></div>
+            {breedingBatches.length ? <div className="breeding-list">{breedingBatches.map(batch => {
+              const observations = fryObservations.filter(item => item.batch_id === batch.id).sort((a,b) => String(b.observed_at).localeCompare(String(a.observed_at)));
+              const latest = observations[0];
+              const currentQuantity = latest ? latest.quantity : batch.fry_count;
+              return <article className="panel breeding-card" key={batch.id}>
+                <div className="breeding-card-head"><div><span className="eyebrow">NASCIMENTO • {new Date(batch.birth_date + 'T12:00:00').toLocaleDateString('pt-BR')}</span><h3>{batch.species}{batch.variety ? ' — ' + batch.variety : ''}</h3><p>{tanks.find(tank => tank.id === batch.aquarium_id)?.name || 'Sem aquário definido'}</p></div><button type="button" className="danger-icon-button" onClick={() => deleteBreedingBatch(batch)} aria-label="Excluir registro de cria"><Trash2 size={15}/></button></div>
+                <div className="breeding-counts"><div><small>Quantidade ao nascer</small><strong>{batch.fry_count}</strong></div><div><small>Quantidade atual</small><strong>{currentQuantity}</strong></div><div><small>Acompanhamentos</small><strong>{observations.length}</strong></div></div>
+                {(batch.female_parent || batch.male_parent) && <p className="breeding-parents">{[batch.female_parent ? 'Mãe: ' + batch.female_parent : '', batch.male_parent ? 'Pai: ' + batch.male_parent : ''].filter(Boolean).join(' • ')}</p>}
+                {batch.notes && <p className="breeding-notes">{batch.notes}</p>}
+                <div className="breeding-history-heading"><strong>Desenvolvimento dos alevinos</strong><button type="button" className="text-button" onClick={() => { setForm({ batchId: batch.id, observedAt: new Date().toISOString().slice(0,10), quantity: String(currentQuantity), averageSizeMm: '', food: '', notes: '' }); setModal('fryObservation'); }}><Plus size={15}/> Registrar evolução</button></div>
+                {observations.length ? <div className="fry-observation-list">{observations.map(item => <div className="fry-observation" key={item.id}><div><strong>{new Date(item.observed_at + 'T12:00:00').toLocaleDateString('pt-BR')}</strong><span>{item.quantity} alevinos{item.average_size_mm !== null ? ' • ' + item.average_size_mm + ' mm em média' : ''}</span>{item.food && <small>Alimentação: {item.food}</small>}{item.notes && <small>{item.notes}</small>}</div><button type="button" className="danger-icon-button" onClick={() => deleteFryObservation(item)} aria-label="Excluir acompanhamento"><Trash2 size={14}/></button></div>)}</div> : <p className="breeding-empty-history">Ainda não há registros de crescimento. Registre uma observação para acompanhar a evolução.</p>}
+              </article>;
+            })}</div> : <Empty title="Nenhuma cria registrada" text="Use “Registrar cria” para anotar um nascimento e começar o acompanhamento dos alevinos."/>}
+            <p className="note">A quantidade atual é baseada no último acompanhamento registrado. Os registros ficam associados à sua conta e entram no backup.</p>
+          </section>}
+
           {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Compartilhe experiências e acompanhe os aquaristas que estão conectados agora.</p></div></div><div className="online-panel"><div className="online-heading"><div><strong>Aquaristas online agora</strong><small>Presença em tempo real na comunidade</small></div><span className="online-count">{onlineUsers.length}</span></div>{onlineUsers.length ? <div className="online-list">{onlineUsers.map(person => <div className="online-person" key={person.user_id}><span className="online-avatar">{String(person.display_name || 'A').trim().charAt(0).toUpperCase()}</span><strong>{person.display_name || 'Aquarista'}</strong><i title="Online agora"/></div>)}</div> : <p className="online-empty">Ainda não há outros aquaristas conectados. Quando alguém entrar, aparecerá aqui.</p>}</div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div>{post.userId === user.id && <button type="button" className="danger-icon-button post-delete-button" onClick={() => deletePost(post)} aria-label="Excluir publicação" title="Excluir publicação"><Trash2 size={15}/></button>}<p>{post.text}</p><div className="post-actions">
                   <button type="button" className={post.likedByMe ? 'post-action liked' : 'post-action'} onClick={() => toggleLike(post.id)} disabled={!!likeBusy[post.id]}>
                     <Heart size={17} fill={post.likedByMe ? 'currentColor' : 'none'}/> {post.likes} {post.likes === 1 ? 'curtida' : 'curtidas'}
@@ -958,10 +1056,25 @@ function Dashboard({ user, onSignOut }) {
       {availableVersion && <div className="confirm-modal-backdrop update-modal-backdrop" role="presentation"><section className="confirm-modal update-modal" role="dialog" aria-modal="true" aria-labelledby="update-title"><div className="confirm-modal-heading"><h2 id="update-title">Temos uma atualização!</h2></div><p>Nova versão <strong>{availableVersion}</strong> disponível para o AquaProFish.</p><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAvailableVersion('')}>Agora não</button><a className="primary-button update-download-button" href={APK_DOWNLOAD_URL} target="_blank" rel="noreferrer"><Download size={15}/> Atualizar agora</a></div></section></div>}
       {confirmDialog && <div className="confirm-modal-backdrop" role="presentation"><section className="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message"><div className="confirm-modal-heading"><h2 id="confirm-title">Confirmar ação</h2></div><p id="confirm-message">{confirmDialog}</p><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => finishConfirmation(false)}>Cancelar</button><button type="button" className="danger-confirm-button" onClick={() => finishConfirmation(true)}>Confirmar</button></div></section></div>}
 
-      {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' || modal === 'editTask' ? submitTask : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : modal === 'editTask' ? 'Editar tarefa' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
+      {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' || modal === 'editTask' ? submitTask : modal === 'brood' ? submitBrood : modal === 'fryObservation' ? submitFryObservation : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : modal === 'editTask' ? 'Editar tarefa' : modal === 'brood' ? 'Registrar cria' : modal === 'fryObservation' ? 'Acompanhar alevinos' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
         {(modal === 'tank' || modal === 'editTank') && <><Field label="Nome do aquário *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Aquário da sala"/><div className="form-two"><Field label="Volume" value={form.volume || ''} onChange={v=>setForm({...form,volume:v})} placeholder="Ex.: 100 L"/><Field label="Temperatura" value={form.temperature || ''} onChange={v=>setForm({...form,temperature:v})} placeholder="Ex.: 26 °C"/></div><Field label="pH atual" value={form.ph || ''} onChange={v=>setForm({...form,ph:v})} placeholder="Ex.: 7,0"/><label className="field"><span>Situação do aquário</span><select value={form.status || 'Novo'} onChange={e=>setForm({...form,status:e.target.value})}><option value="Novo">Ainda não avaliado</option><option value="Estável">Estável</option><option value="Atenção">Precisa de atenção</option></select></label></>}
         {(modal === 'fish' || modal === 'editFish') && <><Field label="Nome / variedade *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Guppy Full Red"/><Field label="Espécie" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Poecilia reticulata"/><div className="form-two"><label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(t=><option key={t.id} value={t.id}>{t.name} ({t.volume})</option>)}</select></label><Field label="Quantidade" value={form.count ?? '0'} onChange={v=>setForm({...form,count:v})} placeholder="0" type="number"/></div></>}
         {(modal === 'task' || modal === 'editTask') && <><Field label="Nome da tarefa *" value={form.title || ''} onChange={v=>setForm({...form,title:v})} placeholder="Ex.: Alimentar os peixes"/><label className="field"><span>Tipo de cuidado</span><select value={form.category || 'other'} onChange={e=>setForm({...form,category:e.target.value})}>{taskCategories.map(category=><option key={category.value} value={category.value}>{category.icon} {category.label}</option>)}</select></label><label className="field"><span>Aquário relacionado</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Todos / não definido</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label><Field label="Detalhes" value={form.detail || ''} onChange={v=>setForm({...form,detail:v})} placeholder="Ex.: Pela manhã, pequena quantidade"/><Field label="Data e hora do prazo (opcional)" value={form.dueDate || ''} onChange={v=>setForm({...form,dueDate:v})} type="datetime-local"/><label className="field"><span>Repetir tarefa</span><select value={form.recurrence || 'none'} onChange={e=>setForm({...form,recurrence:e.target.value})}><option value="none">Não se repete</option><option value="daily">Todos os dias</option><option value="weekly">Toda semana</option><option value="monthly">Todo mês</option></select></label><p className="field-hint">Ao concluir uma tarefa recorrente, a próxima será criada automaticamente. O aplicativo destaca tarefas atrasadas e as que vencem nas próximas 24 horas.</p></>}
+        {modal === 'brood' && <>
+          <Field label="Espécie *" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Guppy, Plati, Molinésia..."/>
+          <Field label="Variedade (opcional)" value={form.variety || ''} onChange={v=>setForm({...form,variety:v})} placeholder="Ex.: Full Red, Wagtail..."/>
+          <label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
+          <div className="form-two"><Field label="Data do nascimento *" type="date" value={form.birthDate || new Date().toISOString().slice(0,10)} onChange={v=>setForm({...form,birthDate:v})}/><Field label="Quantidade de alevinos *" type="number" value={form.fryCount ?? '0'} onChange={v=>setForm({...form,fryCount:v})} placeholder="Ex.: 15"/></div>
+          <div className="form-two"><Field label="Mãe / fêmea (opcional)" value={form.femaleParent || ''} onChange={v=>setForm({...form,femaleParent:v})} placeholder="Identificação da fêmea"/><Field label="Pai / macho (opcional)" value={form.maleParent || ''} onChange={v=>setForm({...form,maleParent:v})} placeholder="Identificação do macho"/></div>
+          <Field label="Observações" value={form.notes || ''} onChange={v=>setForm({...form,notes:v})} placeholder="Ex.: primeira cria, cor dos pais..." area/>
+        </>}
+        {modal === 'fryObservation' && <>
+          <label className="field"><span>Registro de cria</span><select value={form.batchId || ''} onChange={e=>setForm({...form,batchId:e.target.value})}>{breedingBatches.map(batch=><option key={batch.id} value={batch.id}>{batch.species}{batch.variety ? ' — ' + batch.variety : ''} • {new Date(batch.birth_date + 'T12:00:00').toLocaleDateString('pt-BR')}</option>)}</select></label>
+          <div className="form-two"><Field label="Data do acompanhamento *" type="date" value={form.observedAt || new Date().toISOString().slice(0,10)} onChange={v=>setForm({...form,observedAt:v})}/><Field label="Quantidade viva *" type="number" value={form.quantity ?? ''} onChange={v=>setForm({...form,quantity:v})} placeholder="Ex.: 14"/></div>
+          <Field label="Tamanho médio (mm)" type="number" value={form.averageSizeMm || ''} onChange={v=>setForm({...form,averageSizeMm:v})} placeholder="Ex.: 8"/>
+          <Field label="Alimentação" value={form.food || ''} onChange={v=>setForm({...form,food:v})} placeholder="Ex.: náuplios de artêmia, microvermes..."/>
+          <Field label="Observações" value={form.notes || ''} onChange={v=>setForm({...form,notes:v})} placeholder="Ex.: estão nadando bem, separados por tamanho..." area/>
+        </>}
         {modal === 'post' && <Field label="O que você gostaria de compartilhar?" value={form.text || ''} onChange={v=>setForm({...form,text:v})} placeholder="Conte uma experiência ou faça uma pergunta..." area/>}
         <div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>setModal('')}>Cancelar</button><button type="submit" className="primary-button"><Plus size={17}/> Salvar</button></div>
       </form></div>}
