@@ -10,6 +10,15 @@ import {
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.145';
 const APK_DOWNLOAD_URL = 'https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk';
+function isVersionNewer(latest, installed) {
+  const a = String(latest).split('.').map(Number);
+  const b = String(installed).split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] || 0) > (b[i] || 0)) return true;
+    if ((a[i] || 0) < (b[i] || 0)) return false;
+  }
+  return false;
+}
 
 const initialTanks = [];
 const initialFish = [];
@@ -170,15 +179,7 @@ function Dashboard({ user, onSignOut }) {
         const release = await response.json();
         const versionText = String(release.body || '').match(/vers[aã]o\\s*:\\s*(\\d+(?:\\.\\d+){1,3})/i);
         const latest = versionText?.[1] || '';
-        const parse = value => String(value).split('.').map(part => Number(part) || 0);
-        const newer = latest && parse(latest).some((part, index, parts) => {
-          const installed = parse(APP_VERSION);
-          for (let i = 0; i < Math.max(parts.length, installed.length); i++) {
-            if ((parts[i] || 0) > (installed[i] || 0)) return true;
-            if ((parts[i] || 0) < (installed[i] || 0)) return false;
-          }
-          return false;
-        });
+        const newer = latest && isVersionNewer(latest, APP_VERSION);
         if (active) {
           setAvailableVersion(newer ? latest : '');
           setUpdateCheckMessage(newer ? '' : 'Você já está usando a versão mais recente.');
@@ -780,7 +781,7 @@ function Dashboard({ user, onSignOut }) {
             </article>
             <article className="panel settings-card">
               <div className="panel-heading"><div><h3>Sobre o AquaProFish</h3><p>Gestão • Criação • Comunidade</p></div><Heart size={20}/></div>
-              <div className="settings-about"><span>Desenvolvedor</span><strong>Andrino Morales Botelho</strong><span>Versão instalada</span><strong>{APP_VERSION} • 2026</strong></div><div className="settings-actions"><button type="button" className="secondary-button" onClick={() => window.location.reload()} disabled={checkingUpdate}><Bell size={16}/>{checkingUpdate ? "Verificando..." : "Verificar atualização"}</button></div>{updateCheckMessage && <p className="settings-message" role="status">{updateCheckMessage}</p>}{availableVersion && <p className="settings-message" role="status">Nova versão {availableVersion} disponível! <a href={APK_DOWNLOAD_URL} target="_blank" rel="noreferrer">Baixar agora</a></p>}
+              <div className="settings-about"><span>Desenvolvedor</span><strong>Andrino Morales Botelho</strong><span>Versão instalada</span><strong>{APP_VERSION} • 2026</strong></div>{updateCheckMessage && <p className="settings-message" role="status">{updateCheckMessage}</p>}{availableVersion && <p className="settings-message" role="status">Nova versão {availableVersion} disponível! <a href={APK_DOWNLOAD_URL} target="_blank" rel="noreferrer">Baixar agora</a></p>}
               <button type="button" className="auth-logout settings-signout" onClick={onSignOut}>Sair da minha conta</button>
             </article>
           </section>}
