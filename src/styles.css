@@ -252,3 +252,41 @@
   .routine-filter { padding: 7px 10px; }
   .routine-task .tag { display: none; }
 }
+
+
+/* AquaProFish 2.0.0 — reprodução e acompanhamento de alevinos */
+.breeding-layout { display: grid; gap: 18px; }
+.breeding-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+.breeding-stat { display: flex; align-items: center; gap: 12px; padding: 16px 18px; }
+.breeding-stat > span { font-size: 25px; }
+.breeding-stat small, .breeding-stat strong { display: block; }
+.breeding-stat small { opacity: .72; font-size: 11px; }
+.breeding-stat strong { margin-top: 3px; font-size: 22px; }
+.breeding-list { display: grid; gap: 14px; }
+.breeding-card { padding: 19px; display: grid; gap: 14px; }
+.breeding-card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.breeding-card-head h3 { margin: 5px 0 3px; font-size: 17px; }
+.breeding-card-head p, .breeding-notes, .breeding-parents { margin: 0; opacity: .76; font-size: 12px; }
+.breeding-counts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 9px; }
+.breeding-counts > div { padding: 11px; border: 1px solid var(--border, rgba(130,160,180,.18)); border-radius: 9px; background: rgba(90,170,190,.06); }
+.breeding-counts small, .breeding-counts strong { display: block; }
+.breeding-counts small { opacity: .7; font-size: 10px; }
+.breeding-counts strong { margin-top: 4px; font-size: 19px; }
+.breeding-history-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border, rgba(130,160,180,.18)); }
+.breeding-history-heading .text-button { display: inline-flex; align-items: center; gap: 5px; }
+.fry-observation-list { display: grid; }
+.fry-observation { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border, rgba(130,160,180,.12)); }
+.fry-observation > div { display: grid; gap: 3px; min-width: 0; }
+.fry-observation strong { font-size: 12px; }
+.fry-observation span { font-size: 12px; color: #55cde2; }
+.fry-observation small { font-size: 11px; opacity: .72; overflow-wrap: anywhere; }
+.breeding-empty-history { margin: 0; font-size: 12px; opacity: .68; }
+@media (max-width: 620px) {
+  .breeding-overview { grid-template-columns: 1fr; gap: 9px; }
+  .breeding-stat { padding: 12px 15px; }
+  .breeding-card { padding: 15px; }
+  .breeding-counts { gap: 6px; }
+  .breeding-counts > div { padding: 9px 7px; }
+  .breeding-counts small { font-size: 9px; }
+  .breeding-counts strong { font-size: 17px; }
+}
