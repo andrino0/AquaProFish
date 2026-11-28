@@ -1,4 +1,5 @@
 name: Validar AquaProFish 2.0.0
+# Executa a compilação do código da branch de desenvolvimento.
 
 on:
   push:
