@@ -227,3 +227,28 @@
 @media (max-width: 620px) {
   .water-trends-grid { grid-template-columns: 1fr; }
 }
+
+
+/* AquaProFish 2.0.0 — agenda inteligente */
+.routine-dashboard { display: grid; gap: 18px; }
+.routine-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.routine-summary-card { padding: 17px 19px; display: flex; align-items: center; gap: 13px; }
+.routine-summary-card > span { font-size: 25px; }
+.routine-summary-card small, .routine-summary-card strong { display: block; }
+.routine-summary-card small { opacity: .7; font-size: 12px; }
+.routine-summary-card strong { margin-top: 3px; font-size: 22px; }
+.routine-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.routine-filter { border: 1px solid var(--border, rgba(130,160,180,.24)); background: transparent; color: inherit; border-radius: 999px; padding: 8px 12px; font: inherit; font-size: 12px; cursor: pointer; }
+.routine-filter.active { background: rgba(22,151,169,.14); border-color: #1697a9; color: inherit; font-weight: 700; }
+.routine-task-wrap { display: flex; align-items: center; gap: 8px; }
+.routine-task-wrap .routine-task { flex: 1; min-width: 0; }
+.routine-task .task-copy { min-width: 0; }
+.routine-task .task-copy small { line-height: 1.5; }
+.routine-task .tag { flex-shrink: 0; }
+@media (max-width: 620px) {
+  .routine-summary-grid { grid-template-columns: 1fr; gap: 9px; }
+  .routine-summary-card { padding: 13px 15px; }
+  .routine-filters { gap: 6px; }
+  .routine-filter { padding: 7px 10px; }
+  .routine-task .tag { display: none; }
+}
