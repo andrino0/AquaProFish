@@ -1115,7 +1115,7 @@ function Dashboard({ user, onSignOut }) {
               <article className="panel calculator-card">
                 <div className="panel-heading"><div><h3>Volume do aquário</h3><p>Calcule o volume bruto e uma estimativa útil</p></div><Waves size={21}/></div>
                 <div className="calculator-fields">
-                  <div className="form-three"><Field label="Comprimento (cm)" type="number" value={volumeCalc.length} onChange={v=>setVolumeCalc(x=>({...x,length:v}))}/><Field label="Largura (cm)" type="number" value={volumeCalc.width} onChange={v=>setVolumeCalc(x=>({...x,width:v}))}/><Field label="Altura (cm)" type="number" value={volumeCalc.height} onChange={v=>setVolumeCalc(x=>({...x,height:v}))}/></div>
+                  <div className="form-three"><Field label="Comprimento (cm)" type="number" step="any" value={volumeCalc.length} onChange={v=>setVolumeCalc(x=>({...x,length:v}))}/><Field label="Largura (cm)" type="number" step="any" value={volumeCalc.width} onChange={v=>setVolumeCalc(x=>({...x,width:v}))}/><Field label="Altura (cm)" type="number" step="any" value={volumeCalc.height} onChange={v=>setVolumeCalc(x=>({...x,height:v}))}/></div>
                   <Field label="Desconto de substrato e decoração (%)" type="number" value={volumeCalc.displacement} onChange={v=>setVolumeCalc(x=>({...x,displacement:v}))} placeholder="Ex.: 10"/>
                 </div>
                 <div className="calculator-results"><div><small>Volume bruto</small><strong>{calcVolume(volumeCalc).gross.toLocaleString('pt-BR',{maximumFractionDigits:1})} L</strong></div><div><small>Volume estimado</small><strong>{calcVolume(volumeCalc).net.toLocaleString('pt-BR',{maximumFractionDigits:1})} L</strong></div></div>
@@ -1124,16 +1124,16 @@ function Dashboard({ user, onSignOut }) {
               <article className="panel calculator-card">
                 <div className="panel-heading"><div><h3>População do aquário</h3><p>Veja indicadores da população informada</p></div><Fish size={21}/></div>
                 <label className="field"><span>Usar aquário cadastrado</span><select value={stockCalc.aquariumId} onChange={e=>{const id=e.target.value;const tank=tanks.find(x=>x.id===id);const vol=tank ? extractLiters(tank.volume) : '';setStockCalc(x=>({...x,aquariumId:id,volume:vol ? String(vol) : x.volume}));}}><option value="">Informar volume manualmente</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name} ({tank.volume})</option>)}</select></label>
-                <div className="form-two"><Field label="Volume de água (L)" type="number" value={stockCalc.volume} onChange={v=>setStockCalc(x=>({...x,volume:v,aquariumId:''}))}/><Field label="Quantidade de peixes" type="number" value={stockCalc.count} onChange={v=>setStockCalc(x=>({...x,count:v}))}/></div>
-                <Field label="Comprimento adulto médio (cm)" type="number" value={stockCalc.averageLength} onChange={v=>setStockCalc(x=>({...x,averageLength:v}))} placeholder="Ex.: 4"/>
+                <div className="form-two"><Field label="Volume de água (L)" type="number" step="any" value={stockCalc.volume} onChange={v=>setStockCalc(x=>({...x,volume:v,aquariumId:''}))}/><Field label="Quantidade de peixes" type="number" value={stockCalc.count} onChange={v=>setStockCalc(x=>({...x,count:v}))}/></div>
+                <Field label="Comprimento adulto médio (cm)" type="number" step="any" value={stockCalc.averageLength} onChange={v=>setStockCalc(x=>({...x,averageLength:v}))} placeholder="Ex.: 4"/>
                 <div className="calculator-results"><div><small>Litros por peixe</small><strong>{calcStock(stockCalc).litersPerFish.toLocaleString('pt-BR',{maximumFractionDigits:1})} L</strong></div><div><small>Comprimento total estimado</small><strong>{calcStock(stockCalc).totalLength.toLocaleString('pt-BR',{maximumFractionDigits:1})} cm</strong></div></div>
                 <p className="calculator-hint">Isto não define uma lotação segura. Espécie, formato do corpo, comportamento, filtragem, oxigenação, manutenção e tamanho adulto mudam muito a capacidade do aquário.</p>
               </article>
               <article className="panel calculator-card">
                 <div className="panel-heading"><div><h3>Dosagem de produtos</h3><p>Calcule a quantidade conforme o rótulo</p></div><Droplets size={21}/></div>
                 <label className="field"><span>Usar aquário cadastrado</span><select value={doseCalc.aquariumId} onChange={e=>{const id=e.target.value;const tank=tanks.find(x=>x.id===id);const vol=tank ? extractLiters(tank.volume) : '';setDoseCalc(x=>({...x,aquariumId:id,volume:vol ? String(vol) : x.volume}));}}><option value="">Informar volume manualmente</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name} ({tank.volume})</option>)}</select></label>
-                <div className="form-two"><Field label="Volume de água (L)" type="number" value={doseCalc.volume} onChange={v=>setDoseCalc(x=>({...x,volume:v,aquariumId:''}))}/><Field label="Dose indicada (mL)" type="number" value={doseCalc.rate} onChange={v=>setDoseCalc(x=>({...x,rate:v}))}/></div>
-                <Field label="Para quantos litros?" type="number" value={doseCalc.rateVolume} onChange={v=>setDoseCalc(x=>({...x,rateVolume:v}))}/>
+                <div className="form-two"><Field label="Volume de água (L)" type="number" step="any" value={doseCalc.volume} onChange={v=>setDoseCalc(x=>({...x,volume:v,aquariumId:''}))}/><Field label="Dose indicada (mL)" type="number" step="any" value={doseCalc.rate} onChange={v=>setDoseCalc(x=>({...x,rate:v}))}/></div>
+                <Field label="Para quantos litros?" type="number" step="any" value={doseCalc.rateVolume} onChange={v=>setDoseCalc(x=>({...x,rateVolume:v}))}/>
                 <div className="dose-result"><small>Quantidade calculada</small><strong>{calcDose(doseCalc).toLocaleString('pt-BR',{maximumFractionDigits:2})} mL</strong></div>
                 <p className="calculator-hint">Use somente a dose e a proporção do rótulo do produto. Não misture produtos; confirme se a indicação é para água nova ou para o aquário inteiro.</p>
               </article>
@@ -1147,11 +1147,11 @@ function Dashboard({ user, onSignOut }) {
               <div className="water-test-fields">
                 <label className="field"><span>Aquário</span><select value={waterForm.aquariumId} onChange={e => setWaterForm(current => ({ ...current, aquariumId: e.target.value }))}><option value="">Sem aquário definido</option>{tanks.map(tank => <option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
                 <Field label="Data e hora" type="datetime-local" value={waterForm.testedAt} onChange={value => setWaterForm(current => ({ ...current, testedAt: value }))}/>
-                <Field label="Temperatura (°C)" type="number" value={waterForm.temperature} onChange={value => setWaterForm(current => ({ ...current, temperature: value }))} placeholder="Ex.: 26"/>
-                <Field label="pH" type="number" value={waterForm.ph} onChange={value => setWaterForm(current => ({ ...current, ph: value }))} placeholder="Ex.: 7,0"/>
-                <Field label="Amônia (mg/L)" type="number" value={waterForm.ammonia} onChange={value => setWaterForm(current => ({ ...current, ammonia: value }))} placeholder="Ex.: 0"/>
-                <Field label="Nitrito (mg/L)" type="number" value={waterForm.nitrite} onChange={value => setWaterForm(current => ({ ...current, nitrite: value }))} placeholder="Ex.: 0"/>
-                <Field label="Nitrato (mg/L)" type="number" value={waterForm.nitrate} onChange={value => setWaterForm(current => ({ ...current, nitrate: value }))} placeholder="Ex.: 10"/>
+                <Field label="Temperatura (°C)" type="number" step="any" value={waterForm.temperature} onChange={value => setWaterForm(current => ({ ...current, temperature: value }))} placeholder="Ex.: 26"/>
+                <Field label="pH" type="number" step="any" value={waterForm.ph} onChange={value => setWaterForm(current => ({ ...current, ph: value }))} placeholder="Ex.: 7,0"/>
+                <Field label="Amônia (mg/L)" type="number" step="any" value={waterForm.ammonia} onChange={value => setWaterForm(current => ({ ...current, ammonia: value }))} placeholder="Ex.: 0"/>
+                <Field label="Nitrito (mg/L)" type="number" step="any" value={waterForm.nitrite} onChange={value => setWaterForm(current => ({ ...current, nitrite: value }))} placeholder="Ex.: 0"/>
+                <Field label="Nitrato (mg/L)" type="number" step="any" value={waterForm.nitrate} onChange={value => setWaterForm(current => ({ ...current, nitrate: value }))} placeholder="Ex.: 10"/>
               </div>
               <Field label="Observações" value={waterForm.notes} onChange={value => setWaterForm(current => ({ ...current, notes: value }))} placeholder="Ex.: teste feito antes da TPA"/>
               <div className="modal-actions"><button type="submit" className="primary-button"><Plus size={17}/> Salvar medição</button></div>
@@ -1355,7 +1355,7 @@ function Dashboard({ user, onSignOut }) {
         </>}
         {modal === 'expense' && <>
           <Field label="Descrição *" value={form.description || ''} onChange={v=>setForm({...form,description:v})} placeholder="Ex.: Ração para os guppys"/>
-          <div className="form-two"><Field label="Valor em reais *" type="number" value={form.amount || ''} onChange={v=>setForm({...form,amount:v})} placeholder="Ex.: 25,90"/><Field label="Data *" type="date" value={form.spentAt || localDateISO()} onChange={v=>setForm({...form,spentAt:v})}/></div>
+          <div className="form-two"><Field label="Valor em reais *" type="number" step="0.01" value={form.amount || ''} onChange={v=>setForm({...form,amount:v})} placeholder="Ex.: 25,90"/><Field label="Data *" type="date" value={form.spentAt || localDateISO()} onChange={v=>setForm({...form,spentAt:v})}/></div>
           <label className="field"><span>Categoria</span><select value={form.category || 'other'} onChange={e=>setForm({...form,category:e.target.value})}><option value="equipment">Equipamentos</option><option value="food">Alimentação</option><option value="medicine">Medicamentos</option><option value="fish">Peixes e animais</option><option value="maintenance">Manutenção</option><option value="other">Outros</option></select></label>
           <label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Despesa geral</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
           <label className="field"><span>Equipamento relacionado (opcional)</span><select value={form.equipmentId || ''} onChange={e=>setForm({...form,equipmentId:e.target.value})}><option value="">Não se aplica</option>{equipment.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -1378,7 +1378,7 @@ function Dashboard({ user, onSignOut }) {
         {modal === 'fryObservation' && <>
           <label className="field"><span>Registro de cria</span><select value={form.batchId || ''} onChange={e=>setForm({...form,batchId:e.target.value})}>{breedingBatches.map(batch=><option key={batch.id} value={batch.id}>{batch.species}{batch.variety ? ' — ' + batch.variety : ''} • {new Date(batch.birth_date + 'T12:00:00').toLocaleDateString('pt-BR')}</option>)}</select></label>
           <div className="form-two"><Field label="Data do acompanhamento *" type="date" value={form.observedAt || new Date().toISOString().slice(0,10)} onChange={v=>setForm({...form,observedAt:v})}/><Field label="Quantidade viva *" type="number" value={form.quantity ?? ''} onChange={v=>setForm({...form,quantity:v})} placeholder="Ex.: 14"/></div>
-          <Field label="Tamanho médio (mm)" type="number" value={form.averageSizeMm || ''} onChange={v=>setForm({...form,averageSizeMm:v})} placeholder="Ex.: 8"/>
+          <Field label="Tamanho médio (mm)" type="number" step="any" value={form.averageSizeMm || ''} onChange={v=>setForm({...form,averageSizeMm:v})} placeholder="Ex.: 8"/>
           <Field label="Alimentação" value={form.food || ''} onChange={v=>setForm({...form,food:v})} placeholder="Ex.: náuplios de artêmia, microvermes..."/>
           <Field label="Observações" value={form.notes || ''} onChange={v=>setForm({...form,notes:v})} placeholder="Ex.: estão nadando bem, separados por tamanho..." area/>
         </>}
@@ -1428,8 +1428,8 @@ function nextMaintenanceDate(item) {
   date.setDate(date.getDate() + interval);
   return date.toISOString().slice(0,10);
 }
-function Field({ label, value, onChange, placeholder, type='text', area=false }) {
-  return <label className="field"><span>{label}</span>{area ? <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows="4"/> : <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>}</label>;
+function Field({ label, value, onChange, placeholder, type='text', area=false, step }) {
+  return <label className="field"><span>{label}</span>{area ? <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows="4"/> : <input type={type} step={step} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>}</label>;
 }
 function Empty({ title, text }) { return <div className="empty-state"><Fish size={28}/><strong>{title}</strong><span>{text}</span></div>; }
 function WaterTrend({ tests, field, label, unit }) {
