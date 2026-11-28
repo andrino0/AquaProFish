@@ -24,6 +24,15 @@ const initialTanks = [];
 const initialFish = [];
 const initialTasks = [];
 const initialPosts = [];
+const taskCategories = [
+  { value: 'tpa', label: 'TPA / troca parcial', icon: '💧' },
+  { value: 'feeding', label: 'Alimentação', icon: '🍽️' },
+  { value: 'filter_cleaning', label: 'Limpeza do filtro', icon: '🧽' },
+  { value: 'media_replacement', label: 'Troca de mídias', icon: '🔄' },
+  { value: 'water_test', label: 'Teste da água', icon: '🧪' },
+  { value: 'health', label: 'Saúde dos peixes', icon: '🐟' },
+  { value: 'other', label: 'Outros cuidados', icon: '📌' }
+];
 
 const speciesGuide = [
   {
@@ -263,7 +272,7 @@ function Dashboard({ user, onSignOut }) {
           tank: dbTanks.find(t => t.id === f.aquarium_id)?.name || 'Sem aquário',
           count: f.quantity || 1
         })));
-        setTasks((taskResult.data || []).map(t => ({ id: t.id, title: t.title, detail: t.detail || '', dueDate: t.due_date || '', recurrence: t.recurrence || 'none', generatedFrom: t.generated_from || null, done: t.completed })));
+        setTasks((taskResult.data || []).map(t => ({ id: t.id, title: t.title, detail: t.detail || '', dueDate: t.due_date || '', recurrence: t.recurrence || 'none', generatedFrom: t.generated_from || null, category: t.category || 'other', aquariumId: t.aquarium_id || '', done: t.completed })));
         const profiles = profileResult.data || [];
         const likes = likeResult.data || [];
         const comments = commentResult.data || [];
@@ -288,6 +297,7 @@ function Dashboard({ user, onSignOut }) {
     return () => { active = false; };
   }, [user?.id]);
   const [query, setQuery] = useState('');
+  const [taskFilter, setTaskFilter] = useState('all');
   const [selectedSpecies, setSelectedSpecies] = useState(null);
   const [modal, setModal] = useState('');
   const [form, setForm] = useState({});
@@ -370,7 +380,7 @@ function Dashboard({ user, onSignOut }) {
   function editTask(task) {
     const date = task.dueDate ? new Date(task.dueDate) : null;
     const localDate = date && !Number.isNaN(date.getTime()) ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
-    setForm({ id: task.id, title: task.title, detail: task.detail || '', dueDate: localDate, recurrence: task.recurrence || 'none' });
+    setForm({ id: task.id, title: task.title, detail: task.detail || '', dueDate: localDate, recurrence: task.recurrence || 'none', category: task.category || 'other', aquariumId: task.aquariumId || '' });
     setModal('editTask');
   }
 
@@ -378,15 +388,15 @@ function Dashboard({ user, onSignOut }) {
     e.preventDefault();
     if (!form.title?.trim()) return;
     setSaveError('');
-    const values = { title: form.title.trim(), detail: form.detail || null, due_date: form.dueDate ? new Date(form.dueDate).toISOString() : null, recurrence: form.recurrence || 'none' };
+    const values = { title: form.title.trim(), detail: form.detail || null, due_date: form.dueDate ? new Date(form.dueDate).toISOString() : null, recurrence: form.recurrence || 'none', category: form.category || 'other', aquarium_id: form.aquariumId || null };
     if (modal === 'editTask') {
       const { data, error } = await supabase.from('tasks').update(values).eq('id', form.id).eq('user_id', user.id).select().single();
       if (error) { setSaveError('Não foi possível atualizar a tarefa: ' + error.message); return; }
-      setTasks(current => current.map(t => t.id === data.id ? { ...t, title: data.title, detail: data.detail || '', dueDate: data.due_date || '', recurrence: data.recurrence || 'none' } : t));
+      setTasks(current => current.map(t => t.id === data.id ? { ...t, title: data.title, detail: data.detail || '', dueDate: data.due_date || '', recurrence: data.recurrence || 'none', category: data.category || 'other', aquariumId: data.aquarium_id || '' } : t));
     } else {
       const { data, error } = await supabase.from('tasks').insert({ user_id: user.id, ...values }).select().single();
       if (error) { setSaveError('Não foi possível salvar a tarefa: ' + error.message); return; }
-      setTasks(current => [{ id: data.id, title: data.title, detail: data.detail || '', dueDate: data.due_date || '', recurrence: data.recurrence || 'none', done: false }, ...current]);
+      setTasks(current => [{ id: data.id, title: data.title, detail: data.detail || '', dueDate: data.due_date || '', recurrence: data.recurrence || 'none', category: data.category || 'other', aquariumId: data.aquarium_id || '', done: false }, ...current]);
     }
     setModal('');
   }
@@ -532,12 +542,12 @@ function Dashboard({ user, onSignOut }) {
       const nextDue = nextRecurringDate(task.dueDate, task.recurrence);
       const { data: nextTask, error: nextError } = await supabase.from('tasks').insert({
         user_id: user.id, title: task.title, detail: task.detail || null,
-        due_date: nextDue, completed: false, recurrence: task.recurrence, generated_from: task.id
+        due_date: nextDue, completed: false, recurrence: task.recurrence, generated_from: task.id, category: task.category || 'other', aquarium_id: task.aquariumId || null
       }).select().maybeSingle();
       if (nextError && nextError.code !== '23505') {
         setSaveError('A tarefa foi concluída, mas não foi possível criar a próxima repetição: ' + nextError.message);
       } else if (nextTask) {
-        setTasks(current => [{ id: nextTask.id, title: nextTask.title, detail: nextTask.detail || '', dueDate: nextTask.due_date || '', recurrence: nextTask.recurrence || 'none', generatedFrom: nextTask.generated_from, done: false }, ...current]);
+        setTasks(current => [{ id: nextTask.id, title: nextTask.title, detail: nextTask.detail || '', dueDate: nextTask.due_date || '', recurrence: nextTask.recurrence || 'none', generatedFrom: nextTask.generated_from, category: nextTask.category || 'other', aquariumId: nextTask.aquarium_id || '', done: false }, ...current]);
       }
     }
   }
@@ -657,7 +667,7 @@ function Dashboard({ user, onSignOut }) {
         ['Tipo', 'Nome', 'Detalhes', 'Aquário', 'Quantidade', 'Status', 'Prazo', 'Repetição'], 
         ...(aquariums.data || []).map(t => ['Aquário', t.name, [t.volume_label || t.volume_liters || '', t.temperature || '', t.ph || ''].filter(Boolean).join(' | '), '', '', t.status || '']),
         ...(fish.data || []).map(f => ['Peixe', f.name, f.species || '', tanksById.get(f.aquarium_id)?.name || 'Sem aquário', f.quantity ?? '', '']),
-        ...(taskRows.data || []).map(t => ['Tarefa', t.title, t.detail || '', '', '', t.completed ? 'Concluída' : 'Pendente', t.due_date ? new Date(t.due_date).toLocaleString('pt-BR') : '', ({daily:'Diária',weekly:'Semanal',monthly:'Mensal'}[t.recurrence] || 'Não se repete')]),
+        ...(taskRows.data || []).map(t => ['Tarefa', t.title, t.detail || '', tanksById.get(t.aquarium_id)?.name || '', '', t.completed ? 'Concluída' : 'Pendente', t.due_date ? new Date(t.due_date).toLocaleString('pt-BR') : '', (taskCategories.find(c => c.value === t.category)?.label || 'Outros cuidados') + ' | ' + ({daily:'Diária',weekly:'Semanal',monthly:'Mensal'}[t.recurrence] || 'Não se repete')]),
         ...(postRows.data || []).map(p => ['Publicação', '', p.content || '', '', '', '']),
         ...(waterTestRows.data || []).map(t => ['Qualidade da água', t.aquarium_id ? (tanksById.get(t.aquarium_id)?.name || '') : 'Sem aquário', ['Temperatura: ' + (t.temperature ?? ''), 'pH: ' + (t.ph ?? ''), 'Amônia: ' + (t.ammonia ?? ''), 'Nitrito: ' + (t.nitrite ?? ''), 'Nitrato: ' + (t.nitrate ?? ''), t.notes || ''].filter(Boolean).join(' | '), '', '', '', t.tested_at ? new Date(t.tested_at).toLocaleString('pt-BR') : ''])
       ];
@@ -694,7 +704,7 @@ function Dashboard({ user, onSignOut }) {
       });
       const aquariums = pickRows(data.aquariums, ['id','name','volume_liters','description','created_at','volume_label','temperature','ph','status']);
       const fish = pickRows(data.fish, ['id','aquarium_id','name','species','quantity','notes','created_at']);
-      const taskRows = pickRows(data.tasks, ['id','title','due_date','completed','created_at','detail','recurrence','generated_from']);
+      const taskRows = pickRows(data.tasks, ['id','title','due_date','completed','created_at','detail','recurrence','generated_from','category','aquarium_id']);
       const waterRows = pickRows(data.water_tests, ['id','aquarium_id','tested_at','temperature','ph','ammonia','nitrite','nitrate','notes','created_at']);
       const postRows = pickRows(data.posts, ['id','content','image_url','created_at','likes']);
       const validIds = rows => rows.filter(row => row.id && row.id !== 'undefined');
@@ -801,7 +811,46 @@ function Dashboard({ user, onSignOut }) {
 
           {section === 'Meus peixes' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Cadastro de peixes</h3><p>Pesquise e acompanhe seus animais</p></div><div className="search-box"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar peixe..."/></div></div><div className="fish-table"><div className="table-head"><span>PEIXE / VARIEDADE</span><span>ESPÉCIE</span><span>AQUÁRIO</span><span>QUANTIDADE</span></div>{filteredFish.map(f => <div className="table-row" key={f.id}><div className="fish-name"><div className="fish-avatar"><Fish size={19}/></div><strong>{f.name}</strong></div><span>{f.species}</span><span>{f.tank}</span><div className="fish-count-actions"><strong>{f.count}</strong><button type="button" className="text-button" onClick={() => editFish(f)}><Pencil size={14}/> Editar</button><button type="button" className="danger-icon-button" onClick={() => deleteFish(f)} aria-label="Excluir peixe" title="Excluir peixe"><Trash2 size={14}/></button></div></div>)}{!filteredFish.length && <Empty title="Nenhum peixe encontrado" text="Tente outro termo de busca ou cadastre um peixe."/>}</div></section>}
 
-          {section === 'Rotina' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Rotina de cuidados</h3><p>Marque as atividades conforme forem concluídas</p></div><span className="count-label">{tasks.filter(t=>t.done).length} de {tasks.length} concluídas</span></div><div className="progress-track"><div style={{width: (tasks.length ? tasks.filter(t=>t.done).length/tasks.length*100 : 0) + '%'}}/></div><div className="routine-list">{tasks.map(t => <div className="routine-task-wrap" key={t.id}><label className={`task-row routine-task ${t.done ? 'task-done' : ''}`}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}{t.dueDate ? " • Prazo: " + new Date(t.dueDate).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : " • Sem prazo definido"}{t.recurrence && t.recurrence !== 'none' ? " • Repetição: " + ({daily:'diária',weekly:'semanal',monthly:'mensal'}[t.recurrence]) : ''}</small></span><button type="button" className="text-button task-edit-button" onClick={() => editTask(t)} aria-label="Editar tarefa" title="Editar tarefa"><Pencil size={14}/></button><span className={t.done ? 'tag success' : 'tag warning'}>{t.done ? 'Concluída' : 'Pendente'}</span></label><button type="button" className="danger-icon-button" onClick={() => deleteTask(t)} aria-label="Excluir tarefa" title="Excluir tarefa"><Trash2 size={15}/></button></div>)}</div><p className="note">Nesta primeira versão, as tarefas são salvas neste dispositivo. Lembretes automáticos serão adicionados na próxima etapa.</p></section>}
+          {section === 'Rotina' && <section className="routine-dashboard">
+            <div className="routine-summary-grid">
+              <article className="panel routine-summary-card"><span>📅</span><div><small>Tarefas cadastradas</small><strong>{tasks.length}</strong></div></article>
+              <article className="panel routine-summary-card"><span>⏰</span><div><small>Em atraso</small><strong>{tasks.filter(t => !t.done && t.dueDate && new Date(t.dueDate) < new Date()).length}</strong></div></article>
+              <article className="panel routine-summary-card"><span>✅</span><div><small>Concluídas</small><strong>{tasks.filter(t => t.done).length}</strong></div></article>
+            </div>
+            <section className="panel page-panel">
+              <div className="panel-heading"><div><h3>Agenda de cuidados</h3><p>Organize os cuidados por tipo e acompanhe os prazos</p></div><span className="count-label">{tasks.filter(t=>t.done).length} de {tasks.length} concluídas</span></div>
+              <div className="progress-track"><div style={{width: (tasks.length ? tasks.filter(t=>t.done).length/tasks.length*100 : 0) + '%'}}/></div>
+              <div className="routine-filters">
+                {[{value:'all',label:'Todas'}, {value:'pending',label:'Pendentes'}, {value:'overdue',label:'Em atraso'}, {value:'done',label:'Concluídas'}, ...taskCategories].map(item => <button type="button" key={item.value} className={taskFilter === item.value ? 'routine-filter active' : 'routine-filter'} onClick={() => setTaskFilter(item.value)}>{item.icon ? item.icon + ' ' : ''}{item.label}</button>)}
+              </div>
+              <div className="routine-list">{tasks
+                .filter(t => taskFilter === 'all' || (taskFilter === 'pending' && !t.done) || (taskFilter === 'done' && t.done) || (taskFilter === 'overdue' && !t.done && t.dueDate && new Date(t.dueDate) < new Date()) || t.category === taskFilter)
+                .slice().sort((a,b) => {
+                  if (a.done !== b.done) return a.done ? 1 : -1;
+                  if (!a.dueDate) return 1;
+                  if (!b.dueDate) return -1;
+                  return new Date(a.dueDate) - new Date(b.dueDate);
+                }).map(t => {
+                  const category = taskCategories.find(c => c.value === t.category) || taskCategories[taskCategories.length - 1];
+                  const overdue = !t.done && t.dueDate && new Date(t.dueDate) < new Date();
+                  const dueSoon = !t.done && t.dueDate && !overdue && new Date(t.dueDate).getTime() - Date.now() <= 24 * 60 * 60 * 1000;
+                  const tankName = tanks.find(tank => tank.id === t.aquariumId)?.name;
+                  return <div className="routine-task-wrap" key={t.id}>
+                    <label className={`task-row routine-task ${t.done ? 'task-done' : ''}`}>
+                      <input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/>
+                      <span className="custom-check"><Check size={13}/></span>
+                      <span className="task-copy"><strong>{category.icon} {t.title}</strong><small>{category.label}{tankName ? ' • ' + tankName : ''}{t.detail ? ' • ' + t.detail : ''}{t.dueDate ? ' • Prazo: ' + new Date(t.dueDate).toLocaleString('pt-BR', {dateStyle:'short',timeStyle:'short'}) : ' • Sem prazo'}{t.recurrence && t.recurrence !== 'none' ? ' • Repetição: ' + ({daily:'diária',weekly:'semanal',monthly:'mensal'}[t.recurrence]) : ''}</small></span>
+                      {overdue ? <span className="tag warning">Em atraso</span> : dueSoon ? <span className="tag warning">Próxima</span> : <span className={t.done ? 'tag success' : 'tag'}>{t.done ? 'Concluída' : 'Pendente'}</span>}
+                      <button type="button" className="text-button task-edit-button" onClick={() => editTask(t)} aria-label="Editar tarefa" title="Editar tarefa"><Pencil size={14}/></button>
+                    </label>
+                    <button type="button" className="danger-icon-button" onClick={() => deleteTask(t)} aria-label="Excluir tarefa" title="Excluir tarefa"><Trash2 size={15}/></button>
+                  </div>;
+                })}
+                {!tasks.some(t => taskFilter === 'all' || (taskFilter === 'pending' && !t.done) || (taskFilter === 'done' && t.done) || (taskFilter === 'overdue' && !t.done && t.dueDate && new Date(t.dueDate) < new Date()) || t.category === taskFilter) && <Empty title="Nenhuma tarefa nesta categoria" text="Cadastre um cuidado ou escolha outro filtro para visualizar sua agenda."/>}
+              </div>
+              <p className="note">Os avisos de atraso e de tarefas próximas aparecem dentro do aplicativo. As tarefas recorrentes continuam gerando o próximo prazo automaticamente.</p>
+            </section>
+          </section>}
 
           {section === 'Qualidade da água' && <section className="water-quality-layout">
             <form className="panel water-test-form" onSubmit={submitWaterTest}>
@@ -912,7 +961,7 @@ function Dashboard({ user, onSignOut }) {
       {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' || modal === 'editTask' ? submitTask : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : modal === 'editTask' ? 'Editar tarefa' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
         {(modal === 'tank' || modal === 'editTank') && <><Field label="Nome do aquário *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Aquário da sala"/><div className="form-two"><Field label="Volume" value={form.volume || ''} onChange={v=>setForm({...form,volume:v})} placeholder="Ex.: 100 L"/><Field label="Temperatura" value={form.temperature || ''} onChange={v=>setForm({...form,temperature:v})} placeholder="Ex.: 26 °C"/></div><Field label="pH atual" value={form.ph || ''} onChange={v=>setForm({...form,ph:v})} placeholder="Ex.: 7,0"/><label className="field"><span>Situação do aquário</span><select value={form.status || 'Novo'} onChange={e=>setForm({...form,status:e.target.value})}><option value="Novo">Ainda não avaliado</option><option value="Estável">Estável</option><option value="Atenção">Precisa de atenção</option></select></label></>}
         {(modal === 'fish' || modal === 'editFish') && <><Field label="Nome / variedade *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Guppy Full Red"/><Field label="Espécie" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Poecilia reticulata"/><div className="form-two"><label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(t=><option key={t.id} value={t.id}>{t.name} ({t.volume})</option>)}</select></label><Field label="Quantidade" value={form.count ?? '0'} onChange={v=>setForm({...form,count:v})} placeholder="0" type="number"/></div></>}
-        {(modal === 'task' || modal === 'editTask') && <><Field label="Nome da tarefa *" value={form.title || ''} onChange={v=>setForm({...form,title:v})} placeholder="Ex.: Alimentar os peixes"/><Field label="Detalhes" value={form.detail || ''} onChange={v=>setForm({...form,detail:v})} placeholder="Ex.: Pela manhã, pequena quantidade"/><Field label="Data e hora do prazo (opcional)" value={form.dueDate || ''} onChange={v=>setForm({...form,dueDate:v})} type="datetime-local"/><label className="field"><span>Repetir tarefa</span><select value={form.recurrence || 'none'} onChange={e=>setForm({...form,recurrence:e.target.value})}><option value="none">Não se repete</option><option value="daily">Todos os dias</option><option value="weekly">Toda semana</option><option value="monthly">Todo mês</option></select></label><p className="field-hint">Ao concluir uma tarefa recorrente, a próxima será criada automaticamente. Se não houver prazo, a próxima data será calculada a partir do dia da conclusão.</p></>}
+        {(modal === 'task' || modal === 'editTask') && <><Field label="Nome da tarefa *" value={form.title || ''} onChange={v=>setForm({...form,title:v})} placeholder="Ex.: Alimentar os peixes"/><label className="field"><span>Tipo de cuidado</span><select value={form.category || 'other'} onChange={e=>setForm({...form,category:e.target.value})}>{taskCategories.map(category=><option key={category.value} value={category.value}>{category.icon} {category.label}</option>)}</select></label><label className="field"><span>Aquário relacionado</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Todos / não definido</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label><Field label="Detalhes" value={form.detail || ''} onChange={v=>setForm({...form,detail:v})} placeholder="Ex.: Pela manhã, pequena quantidade"/><Field label="Data e hora do prazo (opcional)" value={form.dueDate || ''} onChange={v=>setForm({...form,dueDate:v})} type="datetime-local"/><label className="field"><span>Repetir tarefa</span><select value={form.recurrence || 'none'} onChange={e=>setForm({...form,recurrence:e.target.value})}><option value="none">Não se repete</option><option value="daily">Todos os dias</option><option value="weekly">Toda semana</option><option value="monthly">Todo mês</option></select></label><p className="field-hint">Ao concluir uma tarefa recorrente, a próxima será criada automaticamente. O aplicativo destaca tarefas atrasadas e as que vencem nas próximas 24 horas.</p></>}
         {modal === 'post' && <Field label="O que você gostaria de compartilhar?" value={form.text || ''} onChange={v=>setForm({...form,text:v})} placeholder="Conte uma experiência ou faça uma pergunta..." area/>}
         <div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>setModal('')}>Cancelar</button><button type="submit" className="primary-button"><Plus size={17}/> Salvar</button></div>
       </form></div>}
