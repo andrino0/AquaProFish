@@ -737,7 +737,7 @@ function Dashboard({ user, onSignOut }) {
             </article>
             <article className="panel settings-card">
               <div className="panel-heading"><div><h3>Sobre o AquaProFish</h3><p>Gestão • Criação • Comunidade</p></div><Heart size={20}/></div>
-              <div className="settings-about"><span>Desenvolvedor</span><strong>Andrino Morales Botelho</strong><span>Versão do aplicativo</span><strong>1.0 • 2026</strong></div>
+              <div className="settings-about"><span>Desenvolvedor</span><strong>Andrino Morales Botelho</strong><span>Versão do aplicativo</span><strong>1.0.145 • 2026</strong></div>
               <button type="button" className="auth-logout settings-signout" onClick={onSignOut}>Sair da minha conta</button>
             </article>
           </section>}
@@ -761,7 +761,7 @@ function Dashboard({ user, onSignOut }) {
           {section === 'Guia de espécies' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Conheça as espécies</h3><p>Toque em um peixe para abrir sua ficha completa</p></div><span className="tag info">5 espécies</span></div><div className="species-grid">{speciesGuide.map(species => <button type="button" className="species-card species-card-button" key={species.name} onClick={() => setSelectedSpecies(species)}><img className="species-thumb" src={species.image} alt={species.name} loading="lazy" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.nextElementSibling.style.display = 'grid'; }}/><div className="species-illustration species-fallback"><Fish size={32}/></div><div className="species-card-copy"><h3>{species.name}</h3><i>{species.latin}</i><p>{species.summary}</p><span className="species-open">Ver ficha completa <ChevronRight size={14}/></span></div></button>)}</div></section>}
         </div>
         {!Capacitor.isNativePlatform() && <div className="footer-download-wrap"><a className="footer-download" href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk"><Download size={16}/> Baixe aqui o app</a></div>}
-        <footer className="footer"><span className="footer-brand">AquaProFish · Gestão • Criação • Comunidade</span><span className="footer-developer">Desenvolvedor: <strong>Andrino Morales Botelho</strong></span><span>© 2026 AquaProFish. Todos os direitos reservados.</span></footer>
+        <footer className="footer"><span className="footer-brand">AquaProFish · Gestão • Criação • Comunidade</span><span className="footer-version">Versão do app: <strong>1.0.145</strong></span><span className="footer-developer">Desenvolvedor: <strong>Andrino Morales Botelho</strong></span><span>© 2026 AquaProFish. Todos os direitos reservados.</span></footer>
       </main>
 
       {mobileMenu && <button className="mobile-scrim" onClick={() => setMobileMenu(false)} aria-label="Fechar menu"/>}
