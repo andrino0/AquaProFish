@@ -183,3 +183,15 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: true
           files: AquaProFish.apk
+      - name: Publish separate AquaProFish 2.0.0 test APK
+        if: github.ref == 'refs/heads/desenvolvimento/2.0.0'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-2.0-test
+          name: AquaProFish 2.0.0 - APK de testes
+          prerelease: true
+          body_path: release-notes.md
+          make_latest: false
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          files: AquaProFish.apk
