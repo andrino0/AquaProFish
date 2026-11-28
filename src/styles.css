@@ -290,3 +290,28 @@
   .breeding-counts small { font-size: 9px; }
   .breeding-counts strong { font-size: 17px; }
 }
+
+
+/* AquaProFish 2.0.0 — calculadoras */
+.calculators-layout { display:grid; gap:18px; }
+.calculator-intro { display:flex; align-items:flex-start; gap:12px; padding:15px 17px; border:1px solid var(--border,rgba(130,160,180,.18)); border-radius:12px; background:rgba(70,160,190,.07); }
+.calculator-intro > svg { flex-shrink:0; color:#55cde2; }
+.calculator-intro strong { display:block; font-size:14px; }
+.calculator-intro p { margin:4px 0 0; font-size:12px; opacity:.72; line-height:1.5; }
+.calculator-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; align-items:start; }
+.calculator-card { padding:18px; display:grid; gap:14px; }
+.calculator-fields { display:grid; gap:12px; }
+.calculator-card .panel-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.calculator-card .panel-heading h3 { margin:0; font-size:16px; }
+.calculator-card .panel-heading p { margin:4px 0 0; font-size:11px; opacity:.7; }
+.calculator-card .panel-heading > svg { color:#55cde2; flex-shrink:0; }
+.form-three { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.calculator-results { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.calculator-results > div, .dose-result { padding:12px; border:1px solid var(--border,rgba(130,160,180,.18)); border-radius:10px; background:rgba(70,160,190,.07); min-width:0; }
+.calculator-results small, .calculator-results strong, .dose-result small, .dose-result strong { display:block; }
+.calculator-results small, .dose-result small { font-size:10px; opacity:.72; }
+.calculator-results strong, .dose-result strong { margin-top:4px; font-size:20px; color:#55cde2; overflow-wrap:anywhere; }
+.calculator-hint { margin:0; font-size:11px; line-height:1.55; opacity:.72; }
+.dose-result strong { font-size:25px; }
+@media(max-width:760px) { .calculator-grid { grid-template-columns:1fr; } }
+@media(max-width:430px) { .form-three { gap:6px; } .form-three .field span { font-size:10px; } .calculator-card { padding:14px; } }
