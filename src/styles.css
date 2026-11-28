@@ -356,3 +356,8 @@
 .field-hint{display:block;color:#8daabd;font-size:12px;line-height:1.45;margin:-3px 0 8px}
 @media(max-width:900px){.photo-journal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.health-summary-grid,.equipment-grid,.photo-journal-grid{grid-template-columns:1fr}.heading-actions{width:100%}.heading-actions>*{flex:1;justify-content:center}.health-record-card,.expense-row{padding:12px;gap:9px}.expense-amount{font-size:13px}.equipment-card{padding:14px}.photo-journal-card>img{aspect-ratio:16/11}}
+
+/* Histórico de manutenção dos equipamentos */
+.maintenance-history{display:grid;gap:5px;padding:11px 0 2px;margin-top:10px;border-top:1px solid #1b394d}
+.maintenance-history strong{font-size:12px;color:#d6e8f3}
+.maintenance-history small{font-size:11px;line-height:1.4;color:#8eacbf}
