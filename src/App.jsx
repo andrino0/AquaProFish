@@ -601,7 +601,7 @@ function Dashboard({ user, onSignOut }) {
     setBackupBusy(true);
     setSettingsMessage('');
     try {
-      const [aquariums, fish, taskRows, postRows, likes, comments] = await Promise.all([
+      const [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows] = await Promise.all([
         supabase.from('aquariums').select('*').eq('user_id', user.id),
         supabase.from('fish').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id),
@@ -610,7 +610,7 @@ function Dashboard({ user, onSignOut }) {
         supabase.from('post_comments').select('*').eq('user_id', user.id),
         supabase.from('water_tests').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows, likes, comments, waterTests].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows].find(result => result.error);
       if (failed) throw failed.error;
       const backup = {
         app: 'AquaProFish',
@@ -625,7 +625,7 @@ function Dashboard({ user, onSignOut }) {
           posts: postRows.data || [],
           post_likes: likes.data || [],
           post_comments: comments.data || [],
-          water_tests: waterTests.data || []
+          water_tests: waterTestRows.data || []
         }
       };
       const date = new Date().toISOString().slice(0, 10);
@@ -643,14 +643,14 @@ function Dashboard({ user, onSignOut }) {
     setBackupBusy(true);
     setSettingsMessage('');
     try {
-      const [aquariums, fish, taskRows, postRows] = await Promise.all([
+      const [aquariums, fish, taskRows, postRows, waterTestRows] = await Promise.all([
         supabase.from('aquariums').select('*').eq('user_id', user.id),
         supabase.from('fish').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('posts').select('*').eq('user_id', user.id),
         supabase.from('water_tests').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows, waterTests].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, waterTestRows].find(result => result.error);
       if (failed) throw failed.error;
       const tanksById = new Map((aquariums.data || []).map(tank => [tank.id, tank]));
       const rows = [
@@ -659,7 +659,7 @@ function Dashboard({ user, onSignOut }) {
         ...(fish.data || []).map(f => ['Peixe', f.name, f.species || '', tanksById.get(f.aquarium_id)?.name || 'Sem aquário', f.quantity ?? '', '']),
         ...(taskRows.data || []).map(t => ['Tarefa', t.title, t.detail || '', '', '', t.completed ? 'Concluída' : 'Pendente', t.due_date ? new Date(t.due_date).toLocaleString('pt-BR') : '', ({daily:'Diária',weekly:'Semanal',monthly:'Mensal'}[t.recurrence] || 'Não se repete')]),
         ...(postRows.data || []).map(p => ['Publicação', '', p.content || '', '', '', '']),
-        ...(waterTests.data || []).map(t => ['Qualidade da água', t.aquarium_id ? (tanksById.get(t.aquarium_id)?.name || '') : 'Sem aquário', ['Temperatura: ' + (t.temperature ?? ''), 'pH: ' + (t.ph ?? ''), 'Amônia: ' + (t.ammonia ?? ''), 'Nitrito: ' + (t.nitrite ?? ''), 'Nitrato: ' + (t.nitrate ?? ''), t.notes || ''].filter(Boolean).join(' | '), '', '', '', t.tested_at ? new Date(t.tested_at).toLocaleString('pt-BR') : ''])
+        ...(waterTestRows.data || []).map(t => ['Qualidade da água', t.aquarium_id ? (tanksById.get(t.aquarium_id)?.name || '') : 'Sem aquário', ['Temperatura: ' + (t.temperature ?? ''), 'pH: ' + (t.ph ?? ''), 'Amônia: ' + (t.ammonia ?? ''), 'Nitrito: ' + (t.nitrite ?? ''), 'Nitrato: ' + (t.nitrate ?? ''), t.notes || ''].filter(Boolean).join(' | '), '', '', '', t.tested_at ? new Date(t.tested_at).toLocaleString('pt-BR') : ''])
       ];
       const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
       const date = new Date().toISOString().slice(0, 10);
