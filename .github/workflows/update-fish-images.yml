@@ -1,0 +1,40 @@
+name: Atualizar imagens Guppy e Betta
+
+on:
+  workflow_dispatch:
+    inputs:
+      guppy_url:
+        description: URL temporária da nova imagem do Guppy
+        required: true
+        type: string
+      betta_url:
+        description: URL temporária da nova imagem do Betta
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  replace-fish-images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar imagens enviadas
+        env:
+          GUPPY_URL: ${{ inputs.guppy_url }}
+          BETTA_URL: ${{ inputs.betta_url }}
+        run: |
+          echo "::add-mask::$GUPPY_URL"
+          echo "::add-mask::$BETTA_URL"
+          curl --fail --location --silent --show-error "$GUPPY_URL" --output public/guppy-g2-ai-small.jpg
+          curl --fail --location --silent --show-error "$BETTA_URL" --output public/betta-b3-ai-small.jpg
+          file public/guppy-g2-ai-small.jpg public/betta-b3-ai-small.jpg
+          test -s public/guppy-g2-ai-small.jpg
+          test -s public/betta-b3-ai-small.jpg
+      - name: Salvar imagens no GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/guppy-g2-ai-small.jpg public/betta-b3-ai-small.jpg
+          git commit -m "Atualiza fotos do Guppy e Betta no guia"
+          git push
