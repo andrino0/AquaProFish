@@ -1,0 +1,25 @@
+name: Validar AquaProFish 2.0.0
+
+on:
+  push:
+    branches:
+      - desenvolvimento/2.0.0
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar dependências
+        run: npm install
+      - name: Validar build web
+        run: npm run build
