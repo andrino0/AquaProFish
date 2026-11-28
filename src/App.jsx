@@ -135,6 +135,8 @@ function Dashboard({ user, onSignOut }) {
   const [tanks, setTanks] = useState(initialTanks);
   const [fishList, setFishList] = useState(initialFish);
   const [tasks, setTasks] = useState(initialTasks);
+  const [waterTests, setWaterTests] = useState([]);
+  const [waterForm, setWaterForm] = useState({ aquariumId: '', testedAt: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16), temperature: '', ph: '', ammonia: '', nitrite: '', nitrate: '', notes: '' });
   const [posts, setPosts] = useState(initialPosts);
   const [dataLoading, setDataLoading] = useState(true);
   const [saveError, setSaveError] = useState('');
@@ -232,16 +234,17 @@ function Dashboard({ user, onSignOut }) {
     let active = true;
     async function loadWorkspace() {
       setDataLoading(true);
-      const [tankResult, fishResult, taskResult, postResult, profileResult, likeResult, commentResult] = await Promise.all([
+      const [tankResult, fishResult, taskResult, postResult, profileResult, likeResult, commentResult, waterResult] = await Promise.all([
         supabase.from('aquariums').select('*').order('created_at', { ascending: false }),
         supabase.from('fish').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
         supabase.from('posts').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('id,display_name'),
         supabase.from('post_likes').select('post_id,user_id'),
-        supabase.from('post_comments').select('*').order('created_at', { ascending: true })
+        supabase.from('post_comments').select('*').order('created_at', { ascending: true }),
+        supabase.from('water_tests').select('*').order('tested_at', { ascending: false })
       ]);
-      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error || likeResult.error || commentResult.error;
+      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error || likeResult.error || commentResult.error || waterResult.error;
       if (failure) {
         console.error('Erro ao carregar dados do AquaProFish:', failure);
         if (active) setSaveError('Não foi possível carregar todos os dados. Verifique sua conexão e tente atualizar.');
@@ -276,6 +279,7 @@ function Dashboard({ user, onSignOut }) {
           })),
           tag: 'Comunidade'
         })));
+        setWaterTests((waterResult.data || []).map(test => ({ ...test })));
         setSaveError('');
       }
       if (active) setDataLoading(false);
@@ -297,7 +301,8 @@ function Dashboard({ user, onSignOut }) {
     { label: 'Aquários', icon: Waves },
     { label: 'Meus peixes', icon: Fish },
     { label: 'Rotina', icon: CalendarDays },
-    { label: 'Comunidade', icon: MessageCircle },
+    { label: 'Qualidade da água', icon: Droplets },
+    { label: 'Comunidade', icon: MessageCircle }
     { label: 'Guia de espécies', icon: BookOpen },
     { label: 'Apoie o AquaProFish', icon: Heart },
     { label: 'Configurações', icon: Settings }
@@ -384,6 +389,54 @@ function Dashboard({ user, onSignOut }) {
       setTasks(current => [{ id: data.id, title: data.title, detail: data.detail || '', dueDate: data.due_date || '', recurrence: data.recurrence || 'none', done: false }, ...current]);
     }
     setModal('');
+  }
+
+  async function submitWaterTest(e) {
+    e.preventDefault();
+    const numericFields = ['temperature', 'ph', 'ammonia', 'nitrite', 'nitrate'];
+    const values = {};
+    numericFields.forEach(field => {
+      const raw = String(waterForm[field] ?? '').trim().replace(',', '.');
+      values[field] = raw === '' ? null : Number(raw);
+    });
+    if (numericFields.every(field => values[field] === null)) {
+      setSaveError('Informe pelo menos um parâmetro da água.');
+      return;
+    }
+    if (numericFields.some(field => values[field] !== null && !Number.isFinite(values[field]))) {
+      setSaveError('Confira os valores informados nos parâmetros.');
+      return;
+    }
+    setSaveError('');
+    const testedAt = waterForm.testedAt ? new Date(waterForm.testedAt).toISOString() : new Date().toISOString();
+    const payload = {
+      user_id: user.id,
+      aquarium_id: waterForm.aquariumId || null,
+      tested_at: testedAt,
+      ...values,
+      notes: waterForm.notes.trim() || null
+    };
+    const { data, error } = await supabase.from('water_tests').insert(payload).select().single();
+    if (error) {
+      setSaveError('Não foi possível salvar a medição: ' + error.message);
+      return;
+    }
+    setWaterTests(current => [data, ...current]);
+    setWaterForm({
+      aquariumId: '',
+      testedAt: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+      temperature: '', ph: '', ammonia: '', nitrite: '', nitrate: '', notes: ''
+    });
+  }
+
+  async function deleteWaterTest(test) {
+    if (!(await confirmAction('Excluir esta medição da qualidade da água?'))) return;
+    const { error } = await supabase.from('water_tests').delete().eq('id', test.id).eq('user_id', user.id);
+    if (error) {
+      setSaveError('Não foi possível excluir a medição: ' + error.message);
+      return;
+    }
+    setWaterTests(current => current.filter(item => item.id !== test.id));
   }
 
   async function submitPost(e) {
@@ -554,9 +607,10 @@ function Dashboard({ user, onSignOut }) {
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('posts').select('*').eq('user_id', user.id),
         supabase.from('post_likes').select('*').eq('user_id', user.id),
-        supabase.from('post_comments').select('*').eq('user_id', user.id)
+        supabase.from('post_comments').select('*').eq('user_id', user.id),
+        supabase.from('water_tests').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows, likes, comments].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, likes, comments, waterTests].find(result => result.error);
       if (failed) throw failed.error;
       const backup = {
         app: 'AquaProFish',
@@ -570,7 +624,8 @@ function Dashboard({ user, onSignOut }) {
           tasks: taskRows.data || [],
           posts: postRows.data || [],
           post_likes: likes.data || [],
-          post_comments: comments.data || []
+          post_comments: comments.data || [],
+          water_tests: waterTests.data || []
         }
       };
       const date = new Date().toISOString().slice(0, 10);
@@ -592,9 +647,10 @@ function Dashboard({ user, onSignOut }) {
         supabase.from('aquariums').select('*').eq('user_id', user.id),
         supabase.from('fish').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id),
-        supabase.from('posts').select('*').eq('user_id', user.id)
+        supabase.from('posts').select('*').eq('user_id', user.id),
+        supabase.from('water_tests').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, waterTests].find(result => result.error);
       if (failed) throw failed.error;
       const tanksById = new Map((aquariums.data || []).map(tank => [tank.id, tank]));
       const rows = [
@@ -602,7 +658,8 @@ function Dashboard({ user, onSignOut }) {
         ...(aquariums.data || []).map(t => ['Aquário', t.name, [t.volume_label || t.volume_liters || '', t.temperature || '', t.ph || ''].filter(Boolean).join(' | '), '', '', t.status || '']),
         ...(fish.data || []).map(f => ['Peixe', f.name, f.species || '', tanksById.get(f.aquarium_id)?.name || 'Sem aquário', f.quantity ?? '', '']),
         ...(taskRows.data || []).map(t => ['Tarefa', t.title, t.detail || '', '', '', t.completed ? 'Concluída' : 'Pendente', t.due_date ? new Date(t.due_date).toLocaleString('pt-BR') : '', ({daily:'Diária',weekly:'Semanal',monthly:'Mensal'}[t.recurrence] || 'Não se repete')]),
-        ...(postRows.data || []).map(p => ['Publicação', '', p.content || '', '', '', ''])
+        ...(postRows.data || []).map(p => ['Publicação', '', p.content || '', '', '', '']),
+        ...(waterTests.data || []).map(t => ['Qualidade da água', t.aquarium_id ? (tanksById.get(t.aquarium_id)?.name || '') : 'Sem aquário', ['Temperatura: ' + (t.temperature ?? ''), 'pH: ' + (t.ph ?? ''), 'Amônia: ' + (t.ammonia ?? ''), 'Nitrito: ' + (t.nitrite ?? ''), 'Nitrato: ' + (t.nitrate ?? ''), t.notes || ''].filter(Boolean).join(' | '), '', '', '', t.tested_at ? new Date(t.tested_at).toLocaleString('pt-BR') : ''])
       ];
       const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
       const date = new Date().toISOString().slice(0, 10);
@@ -638,6 +695,7 @@ function Dashboard({ user, onSignOut }) {
       const aquariums = pickRows(data.aquariums, ['id','name','volume_liters','description','created_at','volume_label','temperature','ph','status']);
       const fish = pickRows(data.fish, ['id','aquarium_id','name','species','quantity','notes','created_at']);
       const taskRows = pickRows(data.tasks, ['id','title','due_date','completed','created_at','detail','recurrence','generated_from']);
+      const waterRows = pickRows(data.water_tests, ['id','aquarium_id','tested_at','temperature','ph','ammonia','nitrite','nitrate','notes','created_at']);
       const postRows = pickRows(data.posts, ['id','content','image_url','created_at','likes']);
       const validIds = rows => rows.filter(row => row.id && row.id !== 'undefined');
       const restore = async (table, rows, conflict = 'id') => {
@@ -647,6 +705,7 @@ function Dashboard({ user, onSignOut }) {
       };
       await restore('aquariums', validIds(aquariums));
       await restore('fish', validIds(fish));
+      await restore('water_tests', validIds(waterRows));
       await restore('tasks', validIds(taskRows));
       await restore('posts', validIds(postRows));
       const postIds = [...new Set([
@@ -743,6 +802,34 @@ function Dashboard({ user, onSignOut }) {
           {section === 'Meus peixes' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Cadastro de peixes</h3><p>Pesquise e acompanhe seus animais</p></div><div className="search-box"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar peixe..."/></div></div><div className="fish-table"><div className="table-head"><span>PEIXE / VARIEDADE</span><span>ESPÉCIE</span><span>AQUÁRIO</span><span>QUANTIDADE</span></div>{filteredFish.map(f => <div className="table-row" key={f.id}><div className="fish-name"><div className="fish-avatar"><Fish size={19}/></div><strong>{f.name}</strong></div><span>{f.species}</span><span>{f.tank}</span><div className="fish-count-actions"><strong>{f.count}</strong><button type="button" className="text-button" onClick={() => editFish(f)}><Pencil size={14}/> Editar</button><button type="button" className="danger-icon-button" onClick={() => deleteFish(f)} aria-label="Excluir peixe" title="Excluir peixe"><Trash2 size={14}/></button></div></div>)}{!filteredFish.length && <Empty title="Nenhum peixe encontrado" text="Tente outro termo de busca ou cadastre um peixe."/>}</div></section>}
 
           {section === 'Rotina' && <section className="panel page-panel"><div className="panel-heading"><div><h3>Rotina de cuidados</h3><p>Marque as atividades conforme forem concluídas</p></div><span className="count-label">{tasks.filter(t=>t.done).length} de {tasks.length} concluídas</span></div><div className="progress-track"><div style={{width: (tasks.length ? tasks.filter(t=>t.done).length/tasks.length*100 : 0) + '%'}}/></div><div className="routine-list">{tasks.map(t => <div className="routine-task-wrap" key={t.id}><label className={`task-row routine-task ${t.done ? 'task-done' : ''}`}><input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id)}/><span className="custom-check"><Check size={13}/></span><span className="task-copy"><strong>{t.title}</strong><small>{t.detail}{t.dueDate ? " • Prazo: " + new Date(t.dueDate).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : " • Sem prazo definido"}{t.recurrence && t.recurrence !== 'none' ? " • Repetição: " + ({daily:'diária',weekly:'semanal',monthly:'mensal'}[t.recurrence]) : ''}</small></span><button type="button" className="text-button task-edit-button" onClick={() => editTask(t)} aria-label="Editar tarefa" title="Editar tarefa"><Pencil size={14}/></button><span className={t.done ? 'tag success' : 'tag warning'}>{t.done ? 'Concluída' : 'Pendente'}</span></label><button type="button" className="danger-icon-button" onClick={() => deleteTask(t)} aria-label="Excluir tarefa" title="Excluir tarefa"><Trash2 size={15}/></button></div>)}</div><p className="note">Nesta primeira versão, as tarefas são salvas neste dispositivo. Lembretes automáticos serão adicionados na próxima etapa.</p></section>}
+
+          {section === 'Qualidade da água' && <section className="water-quality-layout">
+            <form className="panel water-test-form" onSubmit={submitWaterTest}>
+              <div className="panel-heading"><div><h3>Registrar medição</h3><p>Salve os resultados dos testes do seu aquário</p></div><Droplets size={21}/></div>
+              <div className="water-test-fields">
+                <label className="field"><span>Aquário</span><select value={waterForm.aquariumId} onChange={e => setWaterForm(current => ({ ...current, aquariumId: e.target.value }))}><option value="">Sem aquário definido</option>{tanks.map(tank => <option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label>
+                <Field label="Data e hora" type="datetime-local" value={waterForm.testedAt} onChange={value => setWaterForm(current => ({ ...current, testedAt: value }))}/>
+                <Field label="Temperatura (°C)" type="number" value={waterForm.temperature} onChange={value => setWaterForm(current => ({ ...current, temperature: value }))} placeholder="Ex.: 26"/>
+                <Field label="pH" type="number" value={waterForm.ph} onChange={value => setWaterForm(current => ({ ...current, ph: value }))} placeholder="Ex.: 7,0"/>
+                <Field label="Amônia (mg/L)" type="number" value={waterForm.ammonia} onChange={value => setWaterForm(current => ({ ...current, ammonia: value }))} placeholder="Ex.: 0"/>
+                <Field label="Nitrito (mg/L)" type="number" value={waterForm.nitrite} onChange={value => setWaterForm(current => ({ ...current, nitrite: value }))} placeholder="Ex.: 0"/>
+                <Field label="Nitrato (mg/L)" type="number" value={waterForm.nitrate} onChange={value => setWaterForm(current => ({ ...current, nitrate: value }))} placeholder="Ex.: 10"/>
+              </div>
+              <Field label="Observações" value={waterForm.notes} onChange={value => setWaterForm(current => ({ ...current, notes: value }))} placeholder="Ex.: teste feito antes da TPA"/>
+              <div className="modal-actions"><button type="submit" className="primary-button"><Plus size={17}/> Salvar medição</button></div>
+              <p className="note">Registre os valores dos testes para acompanhar a evolução da água ao longo do tempo. Os resultados não substituem a avaliação adequada do aquário.</p>
+            </form>
+            <section className="panel water-test-history">
+              <div className="panel-heading"><div><h3>Histórico de medições</h3><p>{waterTests.length} {waterTests.length === 1 ? 'registro salvo' : 'registros salvos'}</p></div><Activity size={20}/></div>
+              {waterTests.length ? waterTests.map(test => <article className="water-test-row" key={test.id}>
+                <div className="water-test-main"><strong>{tanks.find(tank => tank.id === test.aquarium_id)?.name || 'Sem aquário definido'}</strong><small>{new Date(test.tested_at).toLocaleString('pt-BR')}</small>
+                  <div className="water-test-values">{[['Temperatura',test.temperature,'°C'],['pH',test.ph,''],['Amônia',test.ammonia,' mg/L'],['Nitrito',test.nitrite,' mg/L'],['Nitrato',test.nitrate,' mg/L']].filter(([,value]) => value !== null && value !== undefined).map(([label,value,unit]) => <span key={label}><b>{label}:</b> {value}{unit}</span>)}</div>
+                  {test.notes && <p>{test.notes}</p>}
+                </div>
+                <button type="button" className="danger-icon-button" onClick={() => deleteWaterTest(test)} aria-label="Excluir medição" title="Excluir medição"><Trash2 size={15}/></button>
+              </article>) : <Empty title="Nenhuma medição registrada" text="Registre o primeiro teste para começar seu histórico da qualidade da água."/>}
+            </section>
+          </section>}
 
           {section === 'Comunidade' && <section className="community-layout"><div className="community-intro"><div className="community-icon"><MessageCircle size={25}/></div><div><h2>Uma comunidade que compartilha conhecimento.</h2><p>Compartilhe experiências e acompanhe os aquaristas que estão conectados agora.</p></div></div><div className="online-panel"><div className="online-heading"><div><strong>Aquaristas online agora</strong><small>Presença em tempo real na comunidade</small></div><span className="online-count">{onlineUsers.length}</span></div>{onlineUsers.length ? <div className="online-list">{onlineUsers.map(person => <div className="online-person" key={person.user_id}><span className="online-avatar">{String(person.display_name || 'A').trim().charAt(0).toUpperCase()}</span><strong>{person.display_name || 'Aquarista'}</strong><i title="Online agora"/></div>)}</div> : <p className="online-empty">Ainda não há outros aquaristas conectados. Quando alguém entrar, aparecerá aqui.</p>}</div><div className="feed">{posts.map(post => <article className="panel post-card" key={post.id}><div className="post-author"><div className="avatar">{post.author === 'Você' ? 'V' : 'A'}</div><div><strong>{post.author}</strong><small>{post.time} • {post.tag}</small></div></div>{post.userId === user.id && <button type="button" className="danger-icon-button post-delete-button" onClick={() => deletePost(post)} aria-label="Excluir publicação" title="Excluir publicação"><Trash2 size={15}/></button>}<p>{post.text}</p><div className="post-actions">
                   <button type="button" className={post.likedByMe ? 'post-action liked' : 'post-action'} onClick={() => toggleLike(post.id)} disabled={!!likeBusy[post.id]}>
