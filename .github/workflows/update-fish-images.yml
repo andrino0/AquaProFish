@@ -36,8 +36,13 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const dir = '.github/image-upload';
-          const guppy = Buffer.from(fs.readFileSync(dir + '/guppy.webp.b64', 'utf8').trim(), 'base64');
-          const betta = Buffer.from(fs.readFileSync(dir + '/betta.webp.b64', 'utf8').trim(), 'base64');
+          const readParts = prefix => fs.readdirSync(dir)
+            .filter(name => name.startsWith(prefix + '-') && name.endsWith('.part'))
+            .sort()
+            .map(name => fs.readFileSync(dir + '/' + name, 'utf8').trim())
+            .join('');
+          const guppy = Buffer.from(readParts('guppy'), 'base64');
+          const betta = Buffer.from(readParts('betta'), 'base64');
           const isWebp = b => b.length > 16 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP';
           if (!isWebp(guppy) || !isWebp(betta)) throw new Error('Uma das imagens não é um WebP válido.');
           fs.writeFileSync('public/guppy-g2-ai-small.webp', guppy);
@@ -54,7 +59,7 @@ jobs:
           console.log('As duas imagens WebP foram validadas e vinculadas ao guia.');
           NODE
 
-      - name: Registrar a atualização no GitHub
+      - name: Registrar a atualização e publicar site e APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
