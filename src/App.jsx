@@ -152,6 +152,7 @@ function Dashboard({ user, onSignOut }) {
   const [fryObservations, setFryObservations] = useState([]);
   const [healthRecords, setHealthRecords] = useState([]);
   const [equipment, setEquipment] = useState([]);
+  const [equipmentMaintenance, setEquipmentMaintenance] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [photoEntries, setPhotoEntries] = useState([]);
   const [photoUploadBusy, setPhotoUploadBusy] = useState(false);
@@ -253,7 +254,7 @@ function Dashboard({ user, onSignOut }) {
     let active = true;
     async function loadWorkspace() {
       setDataLoading(true);
-      const [tankResult, fishResult, taskResult, postResult, profileResult, likeResult, commentResult, waterResult, breedingResult, fryResult, healthResult, equipmentResult, expenseResult, photoJournalResult] = await Promise.all([
+      const [tankResult, fishResult, taskResult, postResult, profileResult, likeResult, commentResult, waterResult, breedingResult, fryResult, healthResult, equipmentResult, expenseResult, photoJournalResult, maintenanceResult] = await Promise.all([
         supabase.from('aquariums').select('*').order('created_at', { ascending: false }),
         supabase.from('fish').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
@@ -267,9 +268,10 @@ function Dashboard({ user, onSignOut }) {
         supabase.from('health_records').select('*').order('recorded_at', { ascending: false }),
         supabase.from('equipment').select('*').order('created_at', { ascending: false }),
         supabase.from('expenses').select('*').order('spent_at', { ascending: false }),
-        supabase.from('photo_journal').select('*').order('taken_at', { ascending: false })
+        supabase.from('photo_journal').select('*').order('taken_at', { ascending: false }),
+        supabase.from('equipment_maintenance').select('*').order('maintained_at', { ascending: false })
       ]);
-      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error || likeResult.error || commentResult.error || waterResult.error || breedingResult.error || fryResult.error || healthResult.error || equipmentResult.error || expenseResult.error || photoJournalResult.error;
+      const failure = tankResult.error || fishResult.error || taskResult.error || postResult.error || profileResult.error || likeResult.error || commentResult.error || waterResult.error || breedingResult.error || fryResult.error || healthResult.error || equipmentResult.error || expenseResult.error || photoJournalResult.error || maintenanceResult.error;
       if (failure) {
         console.error('Erro ao carregar dados do AquaProFish:', failure);
         if (active) setSaveError('Não foi possível carregar todos os dados. Verifique sua conexão e tente atualizar.');
@@ -309,6 +311,7 @@ function Dashboard({ user, onSignOut }) {
         setFryObservations((fryResult.data || []).map(observation => ({ ...observation })));
         setHealthRecords((healthResult.data || []).map(record => ({ ...record })));
         setEquipment((equipmentResult.data || []).map(item => ({ ...item })));
+        setEquipmentMaintenance((maintenanceResult.data || []).map(item => ({ ...item })));
         setExpenses((expenseResult.data || []).map(item => ({ ...item })));
         const journalRows = photoJournalResult.data || [];
         const journalWithUrls = await Promise.all(journalRows.map(async item => {
@@ -516,11 +519,17 @@ function Dashboard({ user, onSignOut }) {
     if (error) { setSaveError('Não foi possível cadastrar o equipamento: ' + error.message); return; }
     setEquipment(current => [data, ...current]); setModal('');
   }
-  async function markEquipmentMaintained(item) {
-    const today = localDateISO();
-    const { data, error } = await supabase.from('equipment').update({ last_maintenance_at: today }).eq('id', item.id).eq('user_id', user.id).select().single();
-    if (error) { setSaveError('Não foi possível registrar a manutenção: ' + error.message); return; }
-    setEquipment(current => current.map(value => value.id === item.id ? data : value));
+  async function submitMaintenanceRecord(e) {
+    e.preventDefault();
+    if (!form.equipmentId || !form.maintainedAt) { setSaveError('Selecione o equipamento e informe a data da manutenção.'); return; }
+    setSaveError('');
+    const { data: log, error: logError } = await supabase.from('equipment_maintenance').insert({ user_id: user.id, equipment_id: form.equipmentId, maintained_at: form.maintainedAt, notes: form.notes?.trim() || null }).select().single();
+    if (logError) { setSaveError('Não foi possível salvar o histórico da manutenção: ' + logError.message); return; }
+    const { data: updated, error: updateError } = await supabase.from('equipment').update({ last_maintenance_at: form.maintainedAt }).eq('id', form.equipmentId).eq('user_id', user.id).select().single();
+    setEquipmentMaintenance(current => [log, ...current].sort((a,b) => String(b.maintained_at).localeCompare(String(a.maintained_at))));
+    if (updated) setEquipment(current => current.map(value => value.id === updated.id ? updated : value));
+    if (updateError) setSaveError('A manutenção foi registrada no histórico, mas a próxima data prevista pode não ter sido atualizada: ' + updateError.message);
+    setModal('');
   }
   async function deleteEquipment(item) {
     if (!(await confirmAction('Excluir o equipamento "' + item.name + '"? Despesas relacionadas continuarão salvas.'))) return;
@@ -810,7 +819,7 @@ function Dashboard({ user, onSignOut }) {
     setBackupBusy(true);
     setSettingsMessage('');
     try {
-      const [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows] = await Promise.all([
+      const [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows, maintenanceRows] = await Promise.all([
         supabase.from('aquariums').select('*').eq('user_id', user.id),
         supabase.from('fish').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id),
@@ -823,9 +832,10 @@ function Dashboard({ user, onSignOut }) {
         supabase.from('health_records').select('*').eq('user_id', user.id),
         supabase.from('equipment').select('*').eq('user_id', user.id),
         supabase.from('expenses').select('*').eq('user_id', user.id),
-        supabase.from('photo_journal').select('*').eq('user_id', user.id)
+        supabase.from('photo_journal').select('*').eq('user_id', user.id),
+        supabase.from('equipment_maintenance').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, likes, comments, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows, maintenanceRows].find(result => result.error);
       if (failed) throw failed.error;
       const backup = {
         app: 'AquaProFish',
@@ -842,7 +852,7 @@ function Dashboard({ user, onSignOut }) {
           post_comments: comments.data || [],
           water_tests: waterTestRows.data || [],
           breeding_batches: breedingRows.data || [],
-          fry_observations: fryRows.data || [], health_records: healthRows.data || [], equipment: equipmentRows.data || [], expenses: expenseRows.data || [], photo_journal: photoJournalRows.data || []
+          fry_observations: fryRows.data || [], health_records: healthRows.data || [], equipment: equipmentRows.data || [], expenses: expenseRows.data || [], photo_journal: photoJournalRows.data || [], equipment_maintenance: maintenanceRows.data || []
         }
       };
       const date = new Date().toISOString().slice(0, 10);
@@ -860,7 +870,7 @@ function Dashboard({ user, onSignOut }) {
     setBackupBusy(true);
     setSettingsMessage('');
     try {
-      const [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows] = await Promise.all([
+      const [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows, maintenanceRows] = await Promise.all([
         supabase.from('aquariums').select('*').eq('user_id', user.id),
         supabase.from('fish').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id),
@@ -871,9 +881,10 @@ function Dashboard({ user, onSignOut }) {
         supabase.from('health_records').select('*').eq('user_id', user.id),
         supabase.from('equipment').select('*').eq('user_id', user.id),
         supabase.from('expenses').select('*').eq('user_id', user.id),
-        supabase.from('photo_journal').select('*').eq('user_id', user.id)
+        supabase.from('photo_journal').select('*').eq('user_id', user.id),
+        supabase.from('equipment_maintenance').select('*').eq('user_id', user.id)
       ]);
-      const failed = [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows].find(result => result.error);
+      const failed = [aquariums, fish, taskRows, postRows, waterTestRows, breedingRows, fryRows, healthRows, equipmentRows, expenseRows, photoJournalRows, maintenanceRows].find(result => result.error);
       if (failed) throw failed.error;
       const tanksById = new Map((aquariums.data || []).map(tank => [tank.id, tank]));
       const rows = [
@@ -888,7 +899,8 @@ function Dashboard({ user, onSignOut }) {
         ...(healthRows.data || []).map(h => ['Saúde dos peixes', h.fish_name || '', [h.symptoms, h.treatment || '', h.medication || '', h.status || '', h.notes || ''].filter(Boolean).join(' | '), tanksById.get(h.aquarium_id)?.name || '', '', '', h.recorded_at ? new Date(h.recorded_at).toLocaleString('pt-BR') : '']),
         ...(equipmentRows.data || []).map(item => ['Equipamento', item.name, [item.brand_model || '', item.category || '', item.notes || '', item.maintenance_interval_days ? 'Manutenção a cada ' + item.maintenance_interval_days + ' dias' : ''].filter(Boolean).join(' | '), tanksById.get(item.aquarium_id)?.name || '', '', item.last_maintenance_at || '', item.installed_at || '']),
         ...(expenseRows.data || []).map(item => ['Despesa', item.description, [item.category || '', item.notes || ''].filter(Boolean).join(' | '), tanksById.get(item.aquarium_id)?.name || '', formatCurrency(item.amount), '', item.spent_at || '']),
-        ...(photoJournalRows.data || []).map(item => ['Diário de fotos', item.caption || '', 'Imagem mantida no armazenamento privado', tanksById.get(item.aquarium_id)?.name || '', '', '', item.taken_at || ''])
+        ...(photoJournalRows.data || []).map(item => ['Diário de fotos', item.caption || '', 'Imagem mantida no armazenamento privado', tanksById.get(item.aquarium_id)?.name || '', '', '', item.taken_at || '']),
+        ...(maintenanceRows.data || []).map(log => ['Manutenção de equipamento', equipmentRows.data?.find(item => item.id === log.equipment_id)?.name || '', log.notes || '', '', '', '', log.maintained_at || ''])
       ];
       const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
       const date = new Date().toISOString().slice(0, 10);
@@ -929,6 +941,7 @@ function Dashboard({ user, onSignOut }) {
       const fryRows = pickRows(data.fry_observations, ['id','batch_id','observed_at','quantity','average_size_mm','food','notes','created_at']);
       const healthRows = pickRows(data.health_records, ['id','aquarium_id','recorded_at','fish_name','symptoms','treatment','medication','status','notes','created_at']);
       const equipmentRows = pickRows(data.equipment, ['id','aquarium_id','name','category','brand_model','installed_at','maintenance_interval_days','last_maintenance_at','notes','created_at']);
+      const maintenanceRows = pickRows(data.equipment_maintenance, ['id','equipment_id','maintained_at','notes','created_at']);
       const expenseRows = pickRows(data.expenses, ['id','aquarium_id','equipment_id','description','category','amount','spent_at','notes','created_at']);
       const photoJournalRows = pickRows(data.photo_journal, ['id','aquarium_id','image_path','caption','taken_at','created_at']);
       const postRows = pickRows(data.posts, ['id','content','image_url','created_at','likes']);
@@ -945,6 +958,7 @@ function Dashboard({ user, onSignOut }) {
       await restore('fry_observations', validIds(fryRows));
       await restore('health_records', validIds(healthRows));
       await restore('equipment', validIds(equipmentRows));
+      await restore('equipment_maintenance', validIds(maintenanceRows));
       await restore('expenses', validIds(expenseRows));
       await restore('photo_journal', validIds(photoJournalRows));
       await restore('tasks', validIds(taskRows));
@@ -1188,7 +1202,8 @@ function Dashboard({ user, onSignOut }) {
                   <h3>{item.name}</h3><p>{item.brand_model || 'Marca/modelo não informado'}</p><small>{tanks.find(tank => tank.id === item.aquarium_id)?.name || 'Sem aquário definido'}</small>
                   <div className="equipment-maintenance"><span>{due ? 'Próxima manutenção: ' + new Date(due + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem lembrete de manutenção'}</span>{due && <span className={'tag ' + (overdue ? 'warning' : 'success')}>{overdue ? 'Atrasada' : 'Programada'}</span>}</div>
                   {item.maintenance_interval_days ? <small>Intervalo: a cada {item.maintenance_interval_days} dias</small> : null}
-                  <button type="button" className="secondary-button maintenance-button" onClick={() => markEquipmentMaintained(item)}><Check size={15}/> Registrar manutenção feita</button>
+                  <button type="button" className="secondary-button maintenance-button" onClick={() => { setForm({ equipmentId: item.id, maintainedAt: localDateISO(), notes: '' }); setModal('maintenanceRecord'); }}><Check size={15}/> Registrar manutenção feita</button>
+                  {equipmentMaintenance.filter(log => log.equipment_id === item.id).slice(0,3).length > 0 && <div className="maintenance-history"><strong>Últimas manutenções</strong>{equipmentMaintenance.filter(log => log.equipment_id === item.id).slice(0,3).map(log => <small key={log.id}>{new Date(log.maintained_at + 'T12:00:00').toLocaleDateString('pt-BR')}{log.notes ? ' • ' + log.notes : ''}</small>)}</div>}
                   {item.notes && <p className="equipment-notes">{item.notes}</p>}
                 </article>;
               })}</div> : <Empty title="Nenhum equipamento cadastrado" text="Cadastre seus equipamentos para organizar as revisões e a manutenção."/>}
@@ -1303,7 +1318,7 @@ function Dashboard({ user, onSignOut }) {
       {availableVersion && <div className="confirm-modal-backdrop update-modal-backdrop" role="presentation"><section className="confirm-modal update-modal" role="dialog" aria-modal="true" aria-labelledby="update-title"><div className="confirm-modal-heading"><h2 id="update-title">Temos uma atualização!</h2></div><p>Nova versão <strong>{availableVersion}</strong> disponível para o AquaProFish.</p><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAvailableVersion('')}>Agora não</button><a className="primary-button update-download-button" href={APK_DOWNLOAD_URL} target="_blank" rel="noreferrer"><Download size={15}/> Atualizar agora</a></div></section></div>}
       {confirmDialog && <div className="confirm-modal-backdrop" role="presentation"><section className="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message"><div className="confirm-modal-heading"><h2 id="confirm-title">Confirmar ação</h2></div><p id="confirm-message">{confirmDialog}</p><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => finishConfirmation(false)}>Cancelar</button><button type="button" className="danger-confirm-button" onClick={() => finishConfirmation(true)}>Confirmar</button></div></section></div>}
 
-      {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' || modal === 'editTask' ? submitTask : modal === 'healthRecord' ? submitHealthRecord : modal === 'equipment' ? submitEquipment : modal === 'expense' ? submitExpense : modal === 'photoEntry' ? submitPhotoEntry : modal === 'brood' ? submitBrood : modal === 'fryObservation' ? submitFryObservation : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : modal === 'editTask' ? 'Editar tarefa' : modal === 'healthRecord' ? 'Registrar saúde do peixe' : modal === 'equipment' ? 'Cadastrar equipamento' : modal === 'expense' ? 'Lançar despesa' : modal === 'photoEntry' ? 'Adicionar foto ao diário' : modal === 'brood' ? 'Registrar cria' : modal === 'fryObservation' ? 'Acompanhar alevinos' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
+      {modal && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setModal(''); }}><form className="modal" onSubmit={modal === 'tank' || modal === 'editTank' ? submitTank : modal === 'fish' || modal === 'editFish' ? submitFish : modal === 'task' || modal === 'editTask' ? submitTask : modal === 'healthRecord' ? submitHealthRecord : modal === 'equipment' ? submitEquipment : modal === 'maintenanceRecord' ? submitMaintenanceRecord : modal === 'expense' ? submitExpense : modal === 'photoEntry' ? submitPhotoEntry : modal === 'brood' ? submitBrood : modal === 'fryObservation' ? submitFryObservation : submitPost}><div className="modal-heading"><div><span className="eyebrow">AQUAPROFISH</span><h2>{modal === 'tank' ? 'Adicionar aquário' : modal === 'editTank' ? 'Editar aquário' : modal === 'fish' ? 'Cadastrar peixe' : modal === 'editFish' ? 'Editar peixe' : modal === 'task' ? 'Nova tarefa' : modal === 'editTask' ? 'Editar tarefa' : modal === 'healthRecord' ? 'Registrar saúde do peixe' : modal === 'equipment' ? 'Cadastrar equipamento' : modal === 'maintenanceRecord' ? 'Registrar manutenção' : modal === 'expense' ? 'Lançar despesa' : modal === 'photoEntry' ? 'Adicionar foto ao diário' : modal === 'brood' ? 'Registrar cria' : modal === 'fryObservation' ? 'Acompanhar alevinos' : 'Nova publicação'}</h2></div><button type="button" className="icon-button" onClick={() => setModal('')}><X size={19}/></button></div>
         {(modal === 'tank' || modal === 'editTank') && <><Field label="Nome do aquário *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Aquário da sala"/><div className="form-two"><Field label="Volume" value={form.volume || ''} onChange={v=>setForm({...form,volume:v})} placeholder="Ex.: 100 L"/><Field label="Temperatura" value={form.temperature || ''} onChange={v=>setForm({...form,temperature:v})} placeholder="Ex.: 26 °C"/></div><Field label="pH atual" value={form.ph || ''} onChange={v=>setForm({...form,ph:v})} placeholder="Ex.: 7,0"/><label className="field"><span>Situação do aquário</span><select value={form.status || 'Novo'} onChange={e=>setForm({...form,status:e.target.value})}><option value="Novo">Ainda não avaliado</option><option value="Estável">Estável</option><option value="Atenção">Precisa de atenção</option></select></label></>}
         {(modal === 'fish' || modal === 'editFish') && <><Field label="Nome / variedade *" value={form.name || ''} onChange={v=>setForm({...form,name:v})} placeholder="Ex.: Guppy Full Red"/><Field label="Espécie" value={form.species || ''} onChange={v=>setForm({...form,species:v})} placeholder="Ex.: Poecilia reticulata"/><div className="form-two"><label className="field"><span>Aquário</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Sem aquário definido</option>{tanks.map(t=><option key={t.id} value={t.id}>{t.name} ({t.volume})</option>)}</select></label><Field label="Quantidade" value={form.count ?? '0'} onChange={v=>setForm({...form,count:v})} placeholder="0" type="number"/></div></>}
         {(modal === 'task' || modal === 'editTask') && <><Field label="Nome da tarefa *" value={form.title || ''} onChange={v=>setForm({...form,title:v})} placeholder="Ex.: Alimentar os peixes"/><label className="field"><span>Tipo de cuidado</span><select value={form.category || 'other'} onChange={e=>setForm({...form,category:e.target.value})}>{taskCategories.map(category=><option key={category.value} value={category.value}>{category.icon} {category.label}</option>)}</select></label><label className="field"><span>Aquário relacionado</span><select value={form.aquariumId || ''} onChange={e=>setForm({...form,aquariumId:e.target.value})}><option value="">Todos / não definido</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name}</option>)}</select></label><Field label="Detalhes" value={form.detail || ''} onChange={v=>setForm({...form,detail:v})} placeholder="Ex.: Pela manhã, pequena quantidade"/><Field label="Data e hora do prazo (opcional)" value={form.dueDate || ''} onChange={v=>setForm({...form,dueDate:v})} type="datetime-local"/><label className="field"><span>Repetir tarefa</span><select value={form.recurrence || 'none'} onChange={e=>setForm({...form,recurrence:e.target.value})}><option value="none">Não se repete</option><option value="daily">Todos os dias</option><option value="weekly">Toda semana</option><option value="monthly">Todo mês</option></select></label><p className="field-hint">Ao concluir uma tarefa recorrente, a próxima será criada automaticamente. O aplicativo destaca tarefas atrasadas e as que vencem nas próximas 24 horas.</p></>}
@@ -1324,6 +1339,11 @@ function Dashboard({ user, onSignOut }) {
           <div className="form-two"><Field label="Data de instalação" type="date" value={form.installedAt || ''} onChange={v=>setForm({...form,installedAt:v})}/><Field label="Intervalo de manutenção (dias)" type="number" value={form.maintenanceIntervalDays || ''} onChange={v=>setForm({...form,maintenanceIntervalDays:v})} placeholder="Ex.: 30"/></div>
           <Field label="Última manutenção" type="date" value={form.lastMaintenanceAt || ''} onChange={v=>setForm({...form,lastMaintenanceAt:v})}/>
           <Field label="Observações" value={form.notes || ''} onChange={v=>setForm({...form,notes:v})} area/>
+        </>}
+        {modal === 'maintenanceRecord' && <>
+          <label className="field"><span>Equipamento</span><select value={form.equipmentId || ''} onChange={e=>setForm({...form,equipmentId:e.target.value})}>{equipment.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <Field label="Data da manutenção *" type="date" value={form.maintainedAt || localDateISO()} onChange={v=>setForm({...form,maintainedAt:v})}/>
+          <Field label="Serviço realizado / observações" value={form.notes || ''} onChange={v=>setForm({...form,notes:v})} placeholder="Ex.: limpeza do rotor, troca de perlon..." area/>
         </>}
         {modal === 'expense' && <>
           <Field label="Descrição *" value={form.description || ''} onChange={v=>setForm({...form,description:v})} placeholder="Ex.: Ração para os guppys"/>
