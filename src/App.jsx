@@ -664,7 +664,7 @@ function Dashboard({ user, onSignOut }) {
       if (failed) throw failed.error;
       const tanksById = new Map((aquariums.data || []).map(tank => [tank.id, tank]));
       const rows = [
-        ['Tipo', 'Nome', 'Detalhes', 'Aquário', 'Quantidade', 'Status', 'Prazo', 'Repetição'], 
+        ['Tipo', 'Nome', 'Detalhes', 'Aquário', 'Quantidade', 'Status', 'Prazo', 'Categoria e repetição'], 
         ...(aquariums.data || []).map(t => ['Aquário', t.name, [t.volume_label || t.volume_liters || '', t.temperature || '', t.ph || ''].filter(Boolean).join(' | '), '', '', t.status || '']),
         ...(fish.data || []).map(f => ['Peixe', f.name, f.species || '', tanksById.get(f.aquarium_id)?.name || 'Sem aquário', f.quantity ?? '', '']),
         ...(taskRows.data || []).map(t => ['Tarefa', t.title, t.detail || '', tanksById.get(t.aquarium_id)?.name || '', '', t.completed ? 'Concluída' : 'Pendente', t.due_date ? new Date(t.due_date).toLocaleString('pt-BR') : '', (taskCategories.find(c => c.value === t.category)?.label || 'Outros cuidados') + ' | ' + ({daily:'Diária',weekly:'Semanal',monthly:'Mensal'}[t.recurrence] || 'Não se repete')]),
