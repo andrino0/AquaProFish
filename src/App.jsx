@@ -3,7 +3,7 @@ import Auth from './Auth.jsx';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from './lib/supabase.js';
 import {
-  Activity, Bell, BookOpen, CalendarDays, Check, ChevronRight, Download, Droplets, Egg,
+  Activity, Bell, BookOpen, CalendarDays, Calculator, Check, ChevronRight, Download, Droplets, Egg,
   Fish, Heart, HeartPulse, Home, Menu, MessageCircle, Pencil, Plus, Search, Settings, Trash2,
   Sparkles, Thermometer, Waves, X, Copy
 } from 'lucide-react';
@@ -145,6 +145,9 @@ function Dashboard({ user, onSignOut }) {
   const [fishList, setFishList] = useState(initialFish);
   const [tasks, setTasks] = useState(initialTasks);
   const [waterTests, setWaterTests] = useState([]);
+  const [volumeCalc, setVolumeCalc] = useState({ length: '60', width: '30', height: '35', displacement: '10' });
+  const [stockCalc, setStockCalc] = useState({ aquariumId: '', volume: '70', count: '5', averageLength: '4' });
+  const [doseCalc, setDoseCalc] = useState({ aquariumId: '', volume: '70', rate: '5', rateVolume: '100' });
   const [breedingBatches, setBreedingBatches] = useState([]);
   const [fryObservations, setFryObservations] = useState([]);
   const [waterForm, setWaterForm] = useState({ aquariumId: '', testedAt: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16), temperature: '', ph: '', ammonia: '', nitrite: '', nitrate: '', notes: '' });
@@ -319,6 +322,7 @@ function Dashboard({ user, onSignOut }) {
     { label: 'Rotina', icon: CalendarDays },
     { label: 'Qualidade da água', icon: Droplets },
     { label: 'Reprodução e alevinos', icon: Egg },
+    { label: 'Calculadoras', icon: Calculator },
     { label: 'Comunidade', icon: MessageCircle },
     { label: 'Guia de espécies', icon: BookOpen },
     { label: 'Apoie o AquaProFish', icon: Heart },
@@ -927,6 +931,38 @@ function Dashboard({ user, onSignOut }) {
             </section>
           </section>}
 
+          {section === 'Calculadoras' && <section className="calculators-layout">
+            <div className="calculator-intro"><Calculator size={23}/><div><strong>Ferramentas de apoio ao aquarista</strong><p>Faça estimativas rápidas. Confira sempre as características do aquário e as instruções dos fabricantes.</p></div></div>
+            <div className="calculator-grid">
+              <article className="panel calculator-card">
+                <div className="panel-heading"><div><h3>Volume do aquário</h3><p>Calcule o volume bruto e uma estimativa útil</p></div><Waves size={21}/></div>
+                <div className="calculator-fields">
+                  <div className="form-three"><Field label="Comprimento (cm)" type="number" value={volumeCalc.length} onChange={v=>setVolumeCalc(x=>({...x,length:v}))}/><Field label="Largura (cm)" type="number" value={volumeCalc.width} onChange={v=>setVolumeCalc(x=>({...x,width:v}))}/><Field label="Altura (cm)" type="number" value={volumeCalc.height} onChange={v=>setVolumeCalc(x=>({...x,height:v}))}/></div>
+                  <Field label="Desconto de substrato e decoração (%)" type="number" value={volumeCalc.displacement} onChange={v=>setVolumeCalc(x=>({...x,displacement:v}))} placeholder="Ex.: 10"/>
+                </div>
+                <div className="calculator-results"><div><small>Volume bruto</small><strong>{calcVolume(volumeCalc).gross.toLocaleString('pt-BR',{maximumFractionDigits:1})} L</strong></div><div><small>Volume estimado</small><strong>{calcVolume(volumeCalc).net.toLocaleString('pt-BR',{maximumFractionDigits:1})} L</strong></div></div>
+                <p className="calculator-hint">A estimativa desconta a porcentagem informada. Para dosagens, prefira o volume real de água, não apenas a medida externa do vidro.</p>
+              </article>
+              <article className="panel calculator-card">
+                <div className="panel-heading"><div><h3>População do aquário</h3><p>Veja indicadores da população informada</p></div><Fish size={21}/></div>
+                <label className="field"><span>Usar aquário cadastrado</span><select value={stockCalc.aquariumId} onChange={e=>{const id=e.target.value;const tank=tanks.find(x=>x.id===id);const vol=tank ? extractLiters(tank.volume) : '';setStockCalc(x=>({...x,aquariumId:id,volume:vol ? String(vol) : x.volume}));}}><option value="">Informar volume manualmente</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name} ({tank.volume})</option>)}</select></label>
+                <div className="form-two"><Field label="Volume de água (L)" type="number" value={stockCalc.volume} onChange={v=>setStockCalc(x=>({...x,volume:v,aquariumId:''}))}/><Field label="Quantidade de peixes" type="number" value={stockCalc.count} onChange={v=>setStockCalc(x=>({...x,count:v}))}/></div>
+                <Field label="Comprimento adulto médio (cm)" type="number" value={stockCalc.averageLength} onChange={v=>setStockCalc(x=>({...x,averageLength:v}))} placeholder="Ex.: 4"/>
+                <div className="calculator-results"><div><small>Litros por peixe</small><strong>{calcStock(stockCalc).litersPerFish.toLocaleString('pt-BR',{maximumFractionDigits:1})} L</strong></div><div><small>Comprimento total estimado</small><strong>{calcStock(stockCalc).totalLength.toLocaleString('pt-BR',{maximumFractionDigits:1})} cm</strong></div></div>
+                <p className="calculator-hint">Isto não define uma lotação segura. Espécie, formato do corpo, comportamento, filtragem, oxigenação, manutenção e tamanho adulto mudam muito a capacidade do aquário.</p>
+              </article>
+              <article className="panel calculator-card">
+                <div className="panel-heading"><div><h3>Dosagem de produtos</h3><p>Calcule a quantidade conforme o rótulo</p></div><Droplets size={21}/></div>
+                <label className="field"><span>Usar aquário cadastrado</span><select value={doseCalc.aquariumId} onChange={e=>{const id=e.target.value;const tank=tanks.find(x=>x.id===id);const vol=tank ? extractLiters(tank.volume) : '';setDoseCalc(x=>({...x,aquariumId:id,volume:vol ? String(vol) : x.volume}));}}><option value="">Informar volume manualmente</option>{tanks.map(tank=><option key={tank.id} value={tank.id}>{tank.name} ({tank.volume})</option>)}</select></label>
+                <div className="form-two"><Field label="Volume de água (L)" type="number" value={doseCalc.volume} onChange={v=>setDoseCalc(x=>({...x,volume:v,aquariumId:''}))}/><Field label="Dose indicada (mL)" type="number" value={doseCalc.rate} onChange={v=>setDoseCalc(x=>({...x,rate:v}))}/></div>
+                <Field label="Para quantos litros?" type="number" value={doseCalc.rateVolume} onChange={v=>setDoseCalc(x=>({...x,rateVolume:v}))}/>
+                <div className="dose-result"><small>Quantidade calculada</small><strong>{calcDose(doseCalc).toLocaleString('pt-BR',{maximumFractionDigits:2})} mL</strong></div>
+                <p className="calculator-hint">Use somente a dose e a proporção do rótulo do produto. Não misture produtos; confirme se a indicação é para água nova ou para o aquário inteiro.</p>
+              </article>
+            </div>
+            <p className="note">As calculadoras fazem estimativas matemáticas e não substituem as orientações específicas para cada espécie ou produto.</p>
+          </section>}
+
           {section === 'Qualidade da água' && <section className="water-quality-layout">
             <form className="panel water-test-form" onSubmit={submitWaterTest}>
               <div className="panel-heading"><div><h3>Registrar medição</h3><p>Salve os resultados dos testes do seu aquário</p></div><Droplets size={21}/></div>
@@ -1085,6 +1121,27 @@ function Dashboard({ user, onSignOut }) {
 function Stat({ icon: Icon, label, value, note, tone, onClick }) {
   return <article className="stat-card" role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onClick={onClick} onKeyDown={e => { if (onClick && (e.key === 'Enter' || e.key === ' ')) onClick(); }} style={onClick ? {cursor:'pointer'} : undefined}><div className={'stat-icon '+tone}><Icon size={20}/></div><span>{label}</span><strong>{value}</strong><small>{note}</small></article>;
 }
+function calcVolume(values) {
+  const l=Number(values.length), w=Number(values.width), h=Number(values.height), d=Number(values.displacement);
+  const valid=[l,w,h,d].every(Number.isFinite) && l>0 && w>0 && h>0 && d>=0 && d<=90;
+  if(!valid) return {gross:0,net:0};
+  const gross=l*w*h/1000;
+  return {gross,net:gross*(1-d/100)};
+}
+function extractLiters(value) {
+  const match=String(value ?? '').replace(',','.').match(/[0-9]+(?:\.[0-9]+)?/);
+  return match ? Number(match[0]) : 0;
+}
+function calcStock(values) {
+  const volume=Number(values.volume), count=Number(values.count), length=Number(values.averageLength);
+  const valid=volume>0 && count>=0 && length>=0 && [volume,count,length].every(Number.isFinite);
+  return {litersPerFish:valid && count>0 ? volume/count : 0,totalLength:valid ? count*length : 0};
+}
+function calcDose(values) {
+  const volume=Number(values.volume), rate=Number(values.rate), rateVolume=Number(values.rateVolume);
+  return volume>0 && rate>=0 && rateVolume>0 && [volume,rate,rateVolume].every(Number.isFinite) ? volume*rate/rateVolume : 0;
+}
+
 function Field({ label, value, onChange, placeholder, type='text', area=false }) {
   return <label className="field"><span>{label}</span>{area ? <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows="4"/> : <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>}</label>;
 }
