@@ -84,8 +84,8 @@ export default function Auth() {
         <button className="auth-link" type="button" onClick={resendConfirmation} disabled={busy}>Reenviar e-mail de confirmação</button>
       </>}
       <div className="auth-switch">{mode === 'signup' ? 'Já tem uma conta?' : 'Ainda não tem uma conta?'} <button type="button" onClick={()=>{setMode(mode==='signup'?'login':'signup');setError('');setMessage('');}}>{mode === 'signup' ? 'Entrar' : 'Criar conta'}</button></div>
-      <a href="https://aquapf.netlify.app/download/AquaProFish.apk" className="app-download-button" download style={{display:"flex",alignItems:"center",justifyContent:"center",gap:9,width:"100%",marginTop:18,padding:"13px 16px",borderRadius:12,border:"1px solid #2b8cba",color:"#0877a8",fontWeight:700,textDecoration:"none"}}>↓ Baixar APP para Android</a>
-      <p className="auth-foot">Sua conta é protegida pelo Supabase. Nunca compartilhe sua senha.</p>
+      <a href="https://github.com/andrino0/AquaProFish/releases/download/apk-latest/AquaProFish.apk" className="app-download-button" download style={{display:"flex",alignItems:"center",justifyContent:"center",gap:9,width:"100%",marginTop:18,padding:"13px 16px",borderRadius:12,border:"1px solid #2b8cba",color:"#0877a8",fontWeight:700,textDecoration:"none"}}>↓ Baixar APP para Android</a>
+      <p className="auth-version">Versão atual do aplicativo: <strong>1.0.145</strong></p><p className="auth-foot">Sua conta é protegida pelo Supabase. Nunca compartilhe sua senha.</p>
     </section>
   </main>;
 }
