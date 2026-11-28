@@ -664,7 +664,7 @@ function Dashboard({ user, onSignOut }) {
       const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
       const date = new Date().toISOString().slice(0, 10);
       downloadFile(csv, 'aquaprofish-dados-' + date + '.csv', 'text/csv;charset=utf-8');
-      setSettingsMessage('Planilha CSV criada com seus aquários, peixes, tarefas e publicações.');
+      setSettingsMessage('Planilha CSV criada com aquários, peixes, tarefas, publicações e medições da água.');
     } catch (error) {
       console.error('Erro ao exportar CSV:', error);
       setSettingsMessage('Não foi possível criar a planilha. Verifique a conexão e tente novamente.');
@@ -819,6 +819,13 @@ function Dashboard({ user, onSignOut }) {
               <div className="modal-actions"><button type="submit" className="primary-button"><Plus size={17}/> Salvar medição</button></div>
               <p className="note">Registre os valores dos testes para acompanhar a evolução da água ao longo do tempo. Os resultados não substituem a avaliação adequada do aquário.</p>
             </form>
+            <section className="water-trends-grid">
+              <WaterTrend tests={waterTests} field="ph" label="pH" unit=""/>
+              <WaterTrend tests={waterTests} field="ammonia" label="Amônia" unit=" mg/L"/>
+              <WaterTrend tests={waterTests} field="nitrite" label="Nitrito" unit=" mg/L"/>
+              <WaterTrend tests={waterTests} field="nitrate" label="Nitrato" unit=" mg/L"/>
+              <WaterTrend tests={waterTests} field="temperature" label="Temperatura" unit=" °C"/>
+            </section>
             <section className="panel water-test-history">
               <div className="panel-heading"><div><h3>Histórico de medições</h3><p>{waterTests.length} {waterTests.length === 1 ? 'registro salvo' : 'registros salvos'}</p></div><Activity size={20}/></div>
               {waterTests.length ? waterTests.map(test => <article className="water-test-row" key={test.id}>
@@ -863,7 +870,7 @@ function Dashboard({ user, onSignOut }) {
                 <button type="button" className="secondary-button" onClick={exportCsv} disabled={backupBusy}><Download size={17}/> Exportar planilha CSV</button>
                 <label className={`secondary-button settings-import ${backupBusy ? 'disabled' : ''}`}><input type="file" accept=".json,application/json" onChange={importBackup} disabled={backupBusy}/><Download size={17}/> Importar backup JSON</label>
               </div>
-              <p className="note">O backup inclui aquários, peixes, tarefas, publicações e suas interações. A restauração adiciona registros que faltam, sem apagar os dados atuais. O arquivo só pode ser restaurado na mesma conta.</p>
+              <p className="note">O backup inclui aquários, peixes, tarefas, medições da água, publicações e suas interações. A restauração adiciona registros que faltam, sem apagar os dados atuais. O arquivo só pode ser restaurado na mesma conta.</p>
               {settingsMessage && <p className="settings-message" role="status">{settingsMessage}</p>}
             </article>
             <article className="panel settings-card">
@@ -920,6 +927,19 @@ function Field({ label, value, onChange, placeholder, type='text', area=false })
   return <label className="field"><span>{label}</span>{area ? <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows="4"/> : <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>}</label>;
 }
 function Empty({ title, text }) { return <div className="empty-state"><Fish size={28}/><strong>{title}</strong><span>{text}</span></div>; }
+function WaterTrend({ tests, field, label, unit }) {
+  const values = tests.filter(test => test[field] !== null && test[field] !== undefined).slice(0, 8).reverse();
+  const numbers = values.map(test => Number(test[field]));
+  const min = numbers.length ? Math.min(...numbers) : 0;
+  const max = numbers.length ? Math.max(...numbers) : 1;
+  const range = max - min || 1;
+  const points = numbers.map((value, index) => {
+    const x = numbers.length === 1 ? 150 : 12 + (index / (numbers.length - 1)) * 276;
+    const y = 78 - ((value - min) / range) * 58;
+    return { x, y };
+  });
+  return <article className="panel water-trend-card"><div className="water-trend-heading"><strong>{label}</strong><span>{numbers.length ? numbers[numbers.length - 1] + unit : 'Sem dados'}</span></div>{numbers.length ? <><svg viewBox="0 0 300 92" role="img" aria-label={'Evolução de ' + label}><polyline points={points.map(point => point.x + ',' + point.y).join(' ')} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>{points.map((point,index) => <circle key={index} cx={point.x} cy={point.y} r="3.5" fill="currentColor"/>)}</svg><small>{values.length === 1 ? 'Uma medição registrada' : values.length + ' medições mais recentes'}</small></> : <p>Registre medições para visualizar a evolução.</p>}</article>;
+}
 
 function App() {
   const [session, setSession] = useState(null);
