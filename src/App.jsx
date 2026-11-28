@@ -302,7 +302,7 @@ function Dashboard({ user, onSignOut }) {
     { label: 'Meus peixes', icon: Fish },
     { label: 'Rotina', icon: CalendarDays },
     { label: 'Qualidade da água', icon: Droplets },
-    { label: 'Comunidade', icon: MessageCircle }
+    { label: 'Comunidade', icon: MessageCircle },
     { label: 'Guia de espécies', icon: BookOpen },
     { label: 'Apoie o AquaProFish', icon: Heart },
     { label: 'Configurações', icon: Settings }
