@@ -177,7 +177,7 @@ function Dashboard({ user, onSignOut }) {
         });
         if (!response.ok) throw new Error('Não foi possível consultar a versão mais recente.');
         const release = await response.json();
-        const versionText = String(release.body || '').match(/vers[aã]o\\s*:\\s*(\\d+(?:\\.\\d+){1,3})/i);
+        const versionText = String(release.body || '').match(/Versão: ([0-9.]+)/i);
         const latest = versionText?.[1] || '';
         const newer = latest && isVersionNewer(latest, APP_VERSION);
         if (active) {
